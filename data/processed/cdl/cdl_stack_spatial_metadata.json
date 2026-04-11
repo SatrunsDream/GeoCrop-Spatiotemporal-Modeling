@@ -1,7 +1,8 @@
 {
-  "source_nc": "data\\interim\\cdl\\cdl_stack_2008_2025.nc",
-  "height": 1520,
-  "width": 2048,
+  "source": "WMS",
+  "wms_url": "https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?",
+  "height": 5979,
+  "width": 8063,
   "years": [
     2008,
     2009,
@@ -24,14 +25,36 @@
   ],
   "crs": "EPSG:5070",
   "transform": [
-    320.3125,
+    259.9966392951277,
     0.0,
-    -843000.0,
+    -719306.6505738779,
     0.0,
-    -319.0789473684211,
-    2412000.0,
+    -259.982406716445,
+    3022573.925240018,
     0.0,
     0.0,
     1.0
-  ]
+  ],
+  "states": [
+    "Iowa",
+    "Nebraska",
+    "Illinois",
+    "Indiana",
+    "Ohio",
+    "Minnesota",
+    "Missouri",
+    "South Dakota",
+    "Wisconsin",
+    "Kansas",
+    "North Dakota",
+    "Kentucky",
+    "Michigan"
+  ],
+  "bbox_5070": [
+    -719306.6505738779,
+    1468139.1154823934,
+    1377046.2520627365,
+    3022573.925240018
+  ],
+  "resolution_m": 260.0
 }
