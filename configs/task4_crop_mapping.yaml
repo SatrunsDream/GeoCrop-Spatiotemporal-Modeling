@@ -1,0 +1,67 @@
+# Task 4 — Crop Mapping Prediction Model
+# CDL history + NDVI + SMAP → crop type classification (corn / soybean / winter wheat)
+
+study_area:
+  states: [Iowa, Illinois, Indiana, Nebraska, Minnesota]
+  bbox: null
+
+target_classes:
+  corn: 1
+  soybean: 5
+  winter_wheat: 26                    # third required class
+  # other / non-crop: aggregated from remaining CDL codes
+
+cdl:
+  history_years: [2013, 2022]         # training label and history feature source
+  test_year: 2023                     # held-out temporal validation year
+  data_path: data/raw/cdl/
+
+features:
+  cdl_history:
+    enabled: true
+    n_years_lookback: 5               # how many prior years of crop sequence to encode
+    include_transition_freq: true     # fraction of corn↔soy transitions
+    include_neighborhood_composition: true  # 3×3 neighbor crop share
+    include_rotation_score: true      # rotation regularity score from Task 2
+  ndvi:
+    enabled: true
+    statistics: [mean_ndvi, peak_ndvi, greenup_doy, peak_doy, integral]
+    source: data/processed/task1/     # phenometrics produced in Task 1
+  smap:
+    enabled: true
+    statistics: [mean_sm, anomaly_zscore_growing_season]
+    source: data/processed/task3/
+
+model:
+  family: lightgbm                    # lightgbm | xgboost | catboost | random_forest
+  hyperparameters:
+    n_estimators: 500
+    learning_rate: 0.05
+    max_depth: 7
+    num_leaves: 63
+    subsample: 0.8
+    colsample_bytree: 0.8
+
+validation:
+  strategy: temporal_holdout          # temporal_holdout | spatial_block_cv | both
+  spatial_block_size_km: 50          # block size for spatial CV (if used)
+  metrics: [overall_accuracy, per_class_f1, confusion_matrix]
+  stratify_by_rotation_regime: true   # report metrics separately for regular vs. irregular rotation
+
+feature_importance:
+  enabled: true
+  method: shap                        # shap | permutation | native_gain
+  ablations:
+    - cdl_only
+    - cdl_plus_ndvi
+    - cdl_plus_smap
+    - cdl_plus_ndvi_plus_smap         # full model
+
+output:
+  figures_dir: artifacts/figures/task4/
+  tables_dir: artifacts/tables/task4/
+  models_dir: artifacts/models/task4/
+  processed_dir: data/processed/task4/
+
+run:
+  seed: 42

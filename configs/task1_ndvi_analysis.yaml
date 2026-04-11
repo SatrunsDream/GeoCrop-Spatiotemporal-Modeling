@@ -1,0 +1,41 @@
+# Task 1 — NDVI Time Series Analysis by Crop Type
+# CDL + MODIS NDVI phenology comparison: corn vs. soybean (Corn Belt)
+
+study_area:
+  states: [Iowa, Nebraska]          # U.S. Corn Belt focus
+  bbox: null                         # [lon_min, lat_min, lon_max, lat_max] — override states if set
+
+cdl:
+  year: 2022                         # CDL year to use as crop mask
+  crop_classes:
+    corn: 1
+    soybean: 5
+  data_path: data/raw/cdl/
+
+ndvi:
+  product: MODIS_NDVI_250m           # CropSmart MODIS NDVI composite
+  temporal_resolution: weekly        # daily | weekly
+  year: 2022                         # must match CDL year
+  growing_season_doy: [100, 310]     # approximate DOY window (mid-April → early Nov)
+  data_path: data/raw/ndvi/
+
+purity_filtering:
+  threshold: 0.80                    # minimum crop fraction within 250m cell (trusted-pixel approach)
+  method: dominant_fraction          # dominant_fraction | buffer_inward
+
+smoothing:
+  method: whittaker                  # whittaker | savitzky_golay | timesat_double_logistic | harmonic
+  whittaker_lambda: 100              # smoothing penalty for Whittaker
+  sg_window: 7                       # Savitzky–Golay window length (if used)
+  sg_polyorder: 2
+
+phenometrics:
+  extract: [greenup_doy, peak_doy, senescence_doy, peak_ndvi, amplitude, integral, greenup_slope]
+
+output:
+  figures_dir: artifacts/figures/task1/
+  tables_dir: artifacts/tables/task1/
+  processed_dir: data/processed/task1/
+
+run:
+  seed: 42

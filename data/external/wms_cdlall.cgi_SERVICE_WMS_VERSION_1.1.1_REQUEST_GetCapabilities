@@ -1,0 +1,839 @@
+<?xml version='1.0' encoding="UTF-8" standalone="no" ?>
+<!DOCTYPE WMT_MS_Capabilities SYSTEM "http://schemas.opengis.net/wms/1.1.1/WMS_MS_Capabilities.dtd"
+ [
+ <!ELEMENT VendorSpecificCapabilities EMPTY>
+ ]>  <!-- end of DOCTYPE declaration -->
+
+<WMT_MS_Capabilities version="1.1.1">
+
+<!-- MapServer version 7.7.0-dev (MS4W 4.0.5) OUTPUT=PNG OUTPUT=JPEG OUTPUT=KML SUPPORTS=PROJ SUPPORTS=AGG SUPPORTS=FREETYPE SUPPORTS=CAIRO SUPPORTS=SVG_SYMBOLS SUPPORTS=SVGCAIRO SUPPORTS=ICONV SUPPORTS=FRIBIDI SUPPORTS=WMS_SERVER SUPPORTS=WMS_CLIENT SUPPORTS=WFS_SERVER SUPPORTS=WFS_CLIENT SUPPORTS=WCS_SERVER SUPPORTS=SOS_SERVER SUPPORTS=FASTCGI SUPPORTS=THREADS SUPPORTS=GEOS SUPPORTS=POINT_Z_M SUPPORTS=PBF INPUT=JPEG INPUT=POSTGIS INPUT=OGR INPUT=GDAL INPUT=SHAPEFILE -->
+
+<Service>
+  <Name>OGC:WMS</Name>
+  <Title>Cropland Data Layer WMS Service</Title>
+  <KeywordList>
+      <Keyword>WMS</Keyword>
+      <Keyword> CropScape</Keyword>
+      <Keyword> Cropland Data Layer</Keyword>
+  </KeywordList>
+  <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?"/>
+  <ContactInformation>
+    <ContactPersonPrimary>
+      <ContactPerson>Dr. Chen Zhang</ContactPerson>
+      <ContactOrganization>Center for Spatial Information Sceince and Systems</ContactOrganization>
+    </ContactPersonPrimary>
+      <ContactPosition>Research Assistant Professor</ContactPosition>
+    <ContactAddress>
+        <AddressType>postal</AddressType>
+        <Address>4400 University Drive, MS 6E1</Address>
+        <City>Fairfax</City>
+        <StateOrProvince>VA</StateOrProvince>
+        <PostCode>22030</PostCode>
+        <Country>USA</Country>
+    </ContactAddress>
+      <ContactVoiceTelephone>703-993-6111</ContactVoiceTelephone>
+  <ContactElectronicMailAddress>czhang11@gmu.edu</ContactElectronicMailAddress>
+  </ContactInformation>
+  <Fees>none</Fees>
+  <AccessConstraints>none</AccessConstraints>
+</Service>
+
+<Capability>
+  <Request>
+    <GetCapabilities>
+      <Format>application/vnd.ogc.wms_xml</Format>
+      <DCPType>
+        <HTTP>
+          <Get><OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?"/></Get>
+          <Post><OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?"/></Post>
+        </HTTP>
+      </DCPType>
+    </GetCapabilities>
+    <GetMap>
+      <Format>image/tiff</Format>
+      <Format>image/png</Format>
+      <Format>image/jpeg</Format>
+      <Format>image/png; mode=8bit</Format>
+      <Format>image/vnd.jpeg-png</Format>
+      <Format>image/vnd.jpeg-png8</Format>
+      <Format>application/x-pdf</Format>
+      <Format>image/svg+xml</Format>
+      <Format>application/vnd.google-earth.kml+xml</Format>
+      <Format>application/vnd.google-earth.kmz</Format>
+      <Format>application/x-protobuf</Format>
+      <Format>application/json</Format>
+      <DCPType>
+        <HTTP>
+          <Get><OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?"/></Get>
+          <Post><OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?"/></Post>
+        </HTTP>
+      </DCPType>
+    </GetMap>
+    <GetFeatureInfo>
+      <Format>text/plain</Format>
+      <Format>application/vnd.ogc.gml</Format>
+      <DCPType>
+        <HTTP>
+          <Get><OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?"/></Get>
+          <Post><OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?"/></Post>
+        </HTTP>
+      </DCPType>
+    </GetFeatureInfo>
+    <DescribeLayer>
+      <Format>text/xml</Format>
+      <DCPType>
+        <HTTP>
+          <Get><OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?"/></Get>
+          <Post><OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?"/></Post>
+        </HTTP>
+      </DCPType>
+    </DescribeLayer>
+    <GetLegendGraphic>
+      <Format>image/png</Format>
+      <Format>image/jpeg</Format>
+      <Format>image/png; mode=8bit</Format>
+      <Format>image/vnd.jpeg-png</Format>
+      <Format>image/vnd.jpeg-png8</Format>
+      <DCPType>
+        <HTTP>
+          <Get><OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?"/></Get>
+          <Post><OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?"/></Post>
+        </HTTP>
+      </DCPType>
+    </GetLegendGraphic>
+    <GetStyles>
+      <Format>text/xml</Format>
+      <DCPType>
+        <HTTP>
+          <Get><OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?"/></Get>
+          <Post><OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?"/></Post>
+        </HTTP>
+      </DCPType>
+    </GetStyles>
+  </Request>
+  <Exception>
+    <Format>application/vnd.ogc.se_xml</Format>
+    <Format>application/vnd.ogc.se_inimage</Format>
+    <Format>application/vnd.ogc.se_blank</Format>
+  </Exception>
+  <VendorSpecificCapabilities />
+  <UserDefinedSymbolization SupportSLD="1" UserLayer="0" UserStyle="1" RemoteWFS="0"/>
+  <Layer>
+<!-- WARNING: The layer name 'NASS Cropland Data Layer' might contain spaces or invalid characters or may start with a number. This could lead to potential problems. -->
+    <Name>NASS Cropland Data Layer</Name>
+    <Title>Cropland Data Layer WMS Service</Title>
+    <Abstract>NASS Cropland Data Layer</Abstract>
+    <KeywordList>
+        <Keyword>WMS</Keyword>
+        <Keyword> CropScape</Keyword>
+        <Keyword> Cropland Data Layer</Keyword>
+    </KeywordList>
+    <SRS>EPSG:5070</SRS>
+    <LatLonBoundingBox minx="-127.887" miny="22.9403" maxx="-65.3455" maxy="51.6051" />
+    <BoundingBox SRS="EPSG:5070"
+                minx="-2.3561e+06" miny="276915" maxx="2.25824e+06" maxy="3.17261e+06" />
+    <Layer queryable="0" opaque="0" cascaded="0">
+        <Name>cdl_latest</Name>
+        <Title>cdl_latest</Title>
+        <SRS>epsg:5070</SRS>
+        <SRS>epsg:102004</SRS>
+        <SRS>epsg:4326</SRS>
+        <LatLonBoundingBox minx="-127.887" miny="22.9403" maxx="-65.3455" maxy="51.6051" />
+        <BoundingBox SRS="epsg:5070"
+                    minx="-2.3561e+06" miny="276915" maxx="2.25824e+06" maxy="3.17261e+06" />
+        <MetadataURL type="TC211">
+          <Format>text/xml</Format>
+          <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?request=GetMetadata&amp;layer=cdl_latest"/>
+        </MetadataURL>
+        <Style>
+          <Name>default</Name>
+          <Title>default</Title>
+          <LegendURL width="155" height="2210">
+             <Format>image/png</Format>
+             <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?version=1.1.1&amp;service=WMS&amp;request=GetLegendGraphic&amp;layer=cdl_latest&amp;format=image/png&amp;STYLE=default"/>
+          </LegendURL>
+        </Style>
+    </Layer>
+    <Layer queryable="0" opaque="0" cascaded="0">
+        <Name>cdl_2025</Name>
+        <Title>cdl_2025</Title>
+        <SRS>epsg:5070</SRS>
+        <SRS>epsg:102004</SRS>
+        <SRS>epsg:4326</SRS>
+        <LatLonBoundingBox minx="-127.887" miny="22.9403" maxx="-65.3455" maxy="51.6051" />
+        <BoundingBox SRS="epsg:5070"
+                    minx="-2.3561e+06" miny="276915" maxx="2.25824e+06" maxy="3.17261e+06" />
+        <MetadataURL type="TC211">
+          <Format>text/xml</Format>
+          <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?request=GetMetadata&amp;layer=cdl_2025"/>
+        </MetadataURL>
+        <Style>
+          <Name>default</Name>
+          <Title>default</Title>
+          <LegendURL width="155" height="2210">
+             <Format>image/png</Format>
+             <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?version=1.1.1&amp;service=WMS&amp;request=GetLegendGraphic&amp;layer=cdl_2025&amp;format=image/png&amp;STYLE=default"/>
+          </LegendURL>
+        </Style>
+    </Layer>
+    <Layer queryable="0" opaque="0" cascaded="0">
+        <Name>hcdl_2024</Name>
+        <Title>hcdl_2024</Title>
+        <SRS>epsg:102007</SRS>
+        <SRS>epsg:4326</SRS>
+        <LatLonBoundingBox minx="-160.51" miny="18.7244" maxx="-154.587" maxy="22.4229" />
+        <BoundingBox SRS="epsg:102007"
+                    minx="-365070" miny="637280" maxx="250960" maxy="1.04213e+06" />
+        <MetadataURL type="TC211">
+          <Format>text/xml</Format>
+          <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?request=GetMetadata&amp;layer=hcdl_2024"/>
+        </MetadataURL>
+        <Style>
+          <Name>default</Name>
+          <Title>default</Title>
+          <LegendURL width="155" height="2210">
+             <Format>image/png</Format>
+             <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?version=1.1.1&amp;service=WMS&amp;request=GetLegendGraphic&amp;layer=hcdl_2024&amp;format=image/png&amp;STYLE=default"/>
+          </LegendURL>
+        </Style>
+    </Layer>
+    <Layer queryable="0" opaque="0" cascaded="0">
+        <Name>hcdl_2023</Name>
+        <Title>hcdl_2023</Title>
+        <SRS>epsg:102007</SRS>
+        <SRS>epsg:4326</SRS>
+        <LatLonBoundingBox minx="-160.51" miny="18.7244" maxx="-154.587" maxy="22.4229" />
+        <BoundingBox SRS="epsg:102007"
+                    minx="-365070" miny="637280" maxx="250960" maxy="1.04213e+06" />
+        <MetadataURL type="TC211">
+          <Format>text/xml</Format>
+          <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?request=GetMetadata&amp;layer=hcdl_2023"/>
+        </MetadataURL>
+        <Style>
+          <Name>default</Name>
+          <Title>default</Title>
+          <LegendURL width="155" height="2210">
+             <Format>image/png</Format>
+             <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?version=1.1.1&amp;service=WMS&amp;request=GetLegendGraphic&amp;layer=hcdl_2023&amp;format=image/png&amp;STYLE=default"/>
+          </LegendURL>
+        </Style>
+    </Layer>
+    <Layer queryable="0" opaque="0" cascaded="0">
+        <Name>cdl_2024</Name>
+        <Title>cdl_2024</Title>
+        <SRS>epsg:5070</SRS>
+        <SRS>epsg:102004</SRS>
+        <SRS>epsg:4326</SRS>
+        <LatLonBoundingBox minx="-127.887" miny="22.9403" maxx="-65.3455" maxy="51.6051" />
+        <BoundingBox SRS="epsg:5070"
+                    minx="-2.3561e+06" miny="276915" maxx="2.25824e+06" maxy="3.17261e+06" />
+        <MetadataURL type="TC211">
+          <Format>text/xml</Format>
+          <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?request=GetMetadata&amp;layer=cdl_2024"/>
+        </MetadataURL>
+        <Style>
+          <Name>default</Name>
+          <Title>default</Title>
+          <LegendURL width="155" height="2210">
+             <Format>image/png</Format>
+             <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?version=1.1.1&amp;service=WMS&amp;request=GetLegendGraphic&amp;layer=cdl_2024&amp;format=image/png&amp;STYLE=default"/>
+          </LegendURL>
+        </Style>
+    </Layer>
+    <Layer queryable="0" opaque="0" cascaded="0">
+        <Name>cdl_2023</Name>
+        <Title>cdl_2023</Title>
+        <SRS>epsg:5070</SRS>
+        <SRS>epsg:102004</SRS>
+        <SRS>epsg:4326</SRS>
+        <LatLonBoundingBox minx="-127.887" miny="22.9403" maxx="-65.3455" maxy="51.6051" />
+        <BoundingBox SRS="epsg:5070"
+                    minx="-2.3561e+06" miny="276915" maxx="2.25824e+06" maxy="3.17261e+06" />
+        <MetadataURL type="TC211">
+          <Format>text/xml</Format>
+          <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?request=GetMetadata&amp;layer=cdl_2023"/>
+        </MetadataURL>
+        <Style>
+          <Name>default</Name>
+          <Title>default</Title>
+          <LegendURL width="155" height="2210">
+             <Format>image/png</Format>
+             <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?version=1.1.1&amp;service=WMS&amp;request=GetLegendGraphic&amp;layer=cdl_2023&amp;format=image/png&amp;STYLE=default"/>
+          </LegendURL>
+        </Style>
+    </Layer>
+    <Layer queryable="0" opaque="0" cascaded="0">
+        <Name>cdl_2022</Name>
+        <Title>cdl_2022</Title>
+        <SRS>epsg:5070</SRS>
+        <SRS>epsg:102004</SRS>
+        <SRS>epsg:4326</SRS>
+        <LatLonBoundingBox minx="-127.887" miny="22.9403" maxx="-65.3455" maxy="51.6051" />
+        <BoundingBox SRS="epsg:5070"
+                    minx="-2.3561e+06" miny="276915" maxx="2.25824e+06" maxy="3.17261e+06" />
+        <MetadataURL type="TC211">
+          <Format>text/xml</Format>
+          <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?request=GetMetadata&amp;layer=cdl_2022"/>
+        </MetadataURL>
+        <Style>
+          <Name>default</Name>
+          <Title>default</Title>
+          <LegendURL width="155" height="2210">
+             <Format>image/png</Format>
+             <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?version=1.1.1&amp;service=WMS&amp;request=GetLegendGraphic&amp;layer=cdl_2022&amp;format=image/png&amp;STYLE=default"/>
+          </LegendURL>
+        </Style>
+    </Layer>
+    <Layer queryable="0" opaque="0" cascaded="0">
+        <Name>cdl_2021</Name>
+        <Title>cdl_2021</Title>
+        <SRS>epsg:5070</SRS>
+        <SRS>epsg:102004</SRS>
+        <SRS>epsg:4326</SRS>
+        <LatLonBoundingBox minx="-127.887" miny="22.9403" maxx="-65.3455" maxy="51.6051" />
+        <BoundingBox SRS="epsg:5070"
+                    minx="-2.3561e+06" miny="276915" maxx="2.25824e+06" maxy="3.17261e+06" />
+        <MetadataURL type="TC211">
+          <Format>text/xml</Format>
+          <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?request=GetMetadata&amp;layer=cdl_2021"/>
+        </MetadataURL>
+        <Style>
+          <Name>default</Name>
+          <Title>default</Title>
+          <LegendURL width="155" height="2210">
+             <Format>image/png</Format>
+             <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?version=1.1.1&amp;service=WMS&amp;request=GetLegendGraphic&amp;layer=cdl_2021&amp;format=image/png&amp;STYLE=default"/>
+          </LegendURL>
+        </Style>
+    </Layer>
+    <Layer queryable="0" opaque="0" cascaded="0">
+        <Name>cdl_2020</Name>
+        <Title>cdl_2020</Title>
+        <SRS>epsg:5070</SRS>
+        <SRS>epsg:102004</SRS>
+        <SRS>epsg:4326</SRS>
+        <LatLonBoundingBox minx="-127.887" miny="22.9403" maxx="-65.3455" maxy="51.6051" />
+        <BoundingBox SRS="epsg:5070"
+                    minx="-2.3561e+06" miny="276915" maxx="2.25824e+06" maxy="3.17261e+06" />
+        <MetadataURL type="TC211">
+          <Format>text/xml</Format>
+          <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?request=GetMetadata&amp;layer=cdl_2020"/>
+        </MetadataURL>
+        <Style>
+          <Name>default</Name>
+          <Title>default</Title>
+          <LegendURL width="155" height="2210">
+             <Format>image/png</Format>
+             <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?version=1.1.1&amp;service=WMS&amp;request=GetLegendGraphic&amp;layer=cdl_2020&amp;format=image/png&amp;STYLE=default"/>
+          </LegendURL>
+        </Style>
+    </Layer>
+    <Layer queryable="0" opaque="0" cascaded="0">
+        <Name>cdl_2019</Name>
+        <Title>cdl_2019</Title>
+        <SRS>epsg:5070</SRS>
+        <SRS>epsg:102004</SRS>
+        <SRS>epsg:4326</SRS>
+        <LatLonBoundingBox minx="-127.887" miny="22.9403" maxx="-65.3455" maxy="51.6051" />
+        <BoundingBox SRS="epsg:5070"
+                    minx="-2.3561e+06" miny="276915" maxx="2.25824e+06" maxy="3.17261e+06" />
+        <MetadataURL type="TC211">
+          <Format>text/xml</Format>
+          <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?request=GetMetadata&amp;layer=cdl_2019"/>
+        </MetadataURL>
+        <Style>
+          <Name>default</Name>
+          <Title>default</Title>
+          <LegendURL width="155" height="2210">
+             <Format>image/png</Format>
+             <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?version=1.1.1&amp;service=WMS&amp;request=GetLegendGraphic&amp;layer=cdl_2019&amp;format=image/png&amp;STYLE=default"/>
+          </LegendURL>
+        </Style>
+    </Layer>
+    <Layer queryable="0" opaque="0" cascaded="0">
+        <Name>cdl_2018</Name>
+        <Title>cdl_2018</Title>
+        <SRS>epsg:5070</SRS>
+        <SRS>epsg:102004</SRS>
+        <SRS>epsg:4326</SRS>
+        <LatLonBoundingBox minx="-127.887" miny="22.9403" maxx="-65.3455" maxy="51.6051" />
+        <BoundingBox SRS="epsg:5070"
+                    minx="-2.3561e+06" miny="276915" maxx="2.25824e+06" maxy="3.17261e+06" />
+        <MetadataURL type="TC211">
+          <Format>text/xml</Format>
+          <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?request=GetMetadata&amp;layer=cdl_2018"/>
+        </MetadataURL>
+        <Style>
+          <Name>default</Name>
+          <Title>default</Title>
+          <LegendURL width="155" height="2210">
+             <Format>image/png</Format>
+             <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?version=1.1.1&amp;service=WMS&amp;request=GetLegendGraphic&amp;layer=cdl_2018&amp;format=image/png&amp;STYLE=default"/>
+          </LegendURL>
+        </Style>
+    </Layer>
+    <Layer queryable="0" opaque="0" cascaded="0">
+        <Name>cdl_2017</Name>
+        <Title>cdl_2017</Title>
+        <SRS>epsg:5070</SRS>
+        <SRS>epsg:102004</SRS>
+        <SRS>epsg:4326</SRS>
+        <LatLonBoundingBox minx="-127.887" miny="22.9403" maxx="-65.3455" maxy="51.6051" />
+        <BoundingBox SRS="epsg:5070"
+                    minx="-2.3561e+06" miny="276915" maxx="2.25824e+06" maxy="3.17261e+06" />
+        <MetadataURL type="TC211">
+          <Format>text/xml</Format>
+          <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?request=GetMetadata&amp;layer=cdl_2017"/>
+        </MetadataURL>
+        <Style>
+          <Name>default</Name>
+          <Title>default</Title>
+          <LegendURL width="155" height="2210">
+             <Format>image/png</Format>
+             <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?version=1.1.1&amp;service=WMS&amp;request=GetLegendGraphic&amp;layer=cdl_2017&amp;format=image/png&amp;STYLE=default"/>
+          </LegendURL>
+        </Style>
+    </Layer>
+    <Layer queryable="0" opaque="0" cascaded="0">
+        <Name>cdl_2016</Name>
+        <Title>cdl_2016</Title>
+        <SRS>epsg:5070</SRS>
+        <SRS>epsg:102004</SRS>
+        <SRS>epsg:4326</SRS>
+        <LatLonBoundingBox minx="-127.887" miny="22.9403" maxx="-65.3455" maxy="51.6051" />
+        <BoundingBox SRS="epsg:5070"
+                    minx="-2.3561e+06" miny="276915" maxx="2.25824e+06" maxy="3.17261e+06" />
+        <MetadataURL type="TC211">
+          <Format>text/xml</Format>
+          <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?request=GetMetadata&amp;layer=cdl_2016"/>
+        </MetadataURL>
+        <Style>
+          <Name>default</Name>
+          <Title>default</Title>
+          <LegendURL width="155" height="2210">
+             <Format>image/png</Format>
+             <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?version=1.1.1&amp;service=WMS&amp;request=GetLegendGraphic&amp;layer=cdl_2016&amp;format=image/png&amp;STYLE=default"/>
+          </LegendURL>
+        </Style>
+    </Layer>
+    <Layer queryable="0" opaque="0" cascaded="0">
+        <Name>cdl_2015</Name>
+        <Title>cdl_2015</Title>
+        <SRS>epsg:5070</SRS>
+        <SRS>epsg:102004</SRS>
+        <SRS>epsg:4326</SRS>
+        <LatLonBoundingBox minx="-127.887" miny="22.9403" maxx="-65.3455" maxy="51.6051" />
+        <BoundingBox SRS="epsg:5070"
+                    minx="-2.3561e+06" miny="276915" maxx="2.25824e+06" maxy="3.17261e+06" />
+        <MetadataURL type="TC211">
+          <Format>text/xml</Format>
+          <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?request=GetMetadata&amp;layer=cdl_2015"/>
+        </MetadataURL>
+        <Style>
+          <Name>default</Name>
+          <Title>default</Title>
+          <LegendURL width="155" height="2210">
+             <Format>image/png</Format>
+             <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?version=1.1.1&amp;service=WMS&amp;request=GetLegendGraphic&amp;layer=cdl_2015&amp;format=image/png&amp;STYLE=default"/>
+          </LegendURL>
+        </Style>
+    </Layer>
+    <Layer queryable="0" opaque="0" cascaded="0">
+        <Name>cdl_2014</Name>
+        <Title>cdl_2014</Title>
+        <SRS>epsg:5070</SRS>
+        <SRS>epsg:102004</SRS>
+        <SRS>epsg:4326</SRS>
+        <LatLonBoundingBox minx="-127.887" miny="22.9403" maxx="-65.3455" maxy="51.6051" />
+        <BoundingBox SRS="epsg:5070"
+                    minx="-2.3561e+06" miny="276915" maxx="2.25824e+06" maxy="3.17261e+06" />
+        <MetadataURL type="TC211">
+          <Format>text/xml</Format>
+          <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?request=GetMetadata&amp;layer=cdl_2014"/>
+        </MetadataURL>
+        <Style>
+          <Name>default</Name>
+          <Title>default</Title>
+          <LegendURL width="155" height="2210">
+             <Format>image/png</Format>
+             <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?version=1.1.1&amp;service=WMS&amp;request=GetLegendGraphic&amp;layer=cdl_2014&amp;format=image/png&amp;STYLE=default"/>
+          </LegendURL>
+        </Style>
+    </Layer>
+    <Layer queryable="0" opaque="0" cascaded="0">
+        <Name>cdl_2013</Name>
+        <Title>cdl_2013</Title>
+        <SRS>epsg:5070</SRS>
+        <SRS>epsg:102004</SRS>
+        <SRS>epsg:4326</SRS>
+        <LatLonBoundingBox minx="-127.887" miny="22.9403" maxx="-65.3455" maxy="51.6051" />
+        <BoundingBox SRS="epsg:5070"
+                    minx="-2.3561e+06" miny="276915" maxx="2.25824e+06" maxy="3.17261e+06" />
+        <MetadataURL type="TC211">
+          <Format>text/xml</Format>
+          <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?request=GetMetadata&amp;layer=cdl_2013"/>
+        </MetadataURL>
+        <Style>
+          <Name>default</Name>
+          <Title>default</Title>
+          <LegendURL width="155" height="2210">
+             <Format>image/png</Format>
+             <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?version=1.1.1&amp;service=WMS&amp;request=GetLegendGraphic&amp;layer=cdl_2013&amp;format=image/png&amp;STYLE=default"/>
+          </LegendURL>
+        </Style>
+    </Layer>
+    <Layer queryable="0" opaque="0" cascaded="0">
+        <Name>cdl_2012</Name>
+        <Title>cdl_2012</Title>
+        <SRS>epsg:5070</SRS>
+        <SRS>epsg:102004</SRS>
+        <SRS>epsg:4326</SRS>
+        <LatLonBoundingBox minx="-127.887" miny="22.9403" maxx="-65.3455" maxy="51.6051" />
+        <BoundingBox SRS="epsg:5070"
+                    minx="-2.3561e+06" miny="276915" maxx="2.25824e+06" maxy="3.17261e+06" />
+        <MetadataURL type="TC211">
+          <Format>text/xml</Format>
+          <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?request=GetMetadata&amp;layer=cdl_2012"/>
+        </MetadataURL>
+        <Style>
+          <Name>default</Name>
+          <Title>default</Title>
+          <LegendURL width="155" height="2210">
+             <Format>image/png</Format>
+             <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?version=1.1.1&amp;service=WMS&amp;request=GetLegendGraphic&amp;layer=cdl_2012&amp;format=image/png&amp;STYLE=default"/>
+          </LegendURL>
+        </Style>
+    </Layer>
+    <Layer queryable="0" opaque="0" cascaded="0">
+        <Name>cdl_2011</Name>
+        <Title>cdl_2011</Title>
+        <SRS>epsg:5070</SRS>
+        <SRS>epsg:102004</SRS>
+        <SRS>epsg:4326</SRS>
+        <LatLonBoundingBox minx="-127.887" miny="22.9403" maxx="-65.3455" maxy="51.6051" />
+        <BoundingBox SRS="epsg:5070"
+                    minx="-2.3561e+06" miny="276915" maxx="2.25824e+06" maxy="3.17261e+06" />
+        <MetadataURL type="TC211">
+          <Format>text/xml</Format>
+          <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?request=GetMetadata&amp;layer=cdl_2011"/>
+        </MetadataURL>
+        <Style>
+          <Name>default</Name>
+          <Title>default</Title>
+          <LegendURL width="155" height="2210">
+             <Format>image/png</Format>
+             <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?version=1.1.1&amp;service=WMS&amp;request=GetLegendGraphic&amp;layer=cdl_2011&amp;format=image/png&amp;STYLE=default"/>
+          </LegendURL>
+        </Style>
+    </Layer>
+    <Layer queryable="0" opaque="0" cascaded="0">
+        <Name>cdl_2010</Name>
+        <Title>cdl_2010</Title>
+        <SRS>epsg:5070</SRS>
+        <SRS>epsg:102004</SRS>
+        <SRS>epsg:4326</SRS>
+        <LatLonBoundingBox minx="-127.887" miny="22.9403" maxx="-65.3455" maxy="51.6051" />
+        <BoundingBox SRS="epsg:5070"
+                    minx="-2.3561e+06" miny="276915" maxx="2.25824e+06" maxy="3.17261e+06" />
+        <MetadataURL type="TC211">
+          <Format>text/xml</Format>
+          <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?request=GetMetadata&amp;layer=cdl_2010"/>
+        </MetadataURL>
+        <Style>
+          <Name>default</Name>
+          <Title>default</Title>
+          <LegendURL width="155" height="2210">
+             <Format>image/png</Format>
+             <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?version=1.1.1&amp;service=WMS&amp;request=GetLegendGraphic&amp;layer=cdl_2010&amp;format=image/png&amp;STYLE=default"/>
+          </LegendURL>
+        </Style>
+    </Layer>
+    <Layer queryable="0" opaque="0" cascaded="0">
+        <Name>cdl_2009</Name>
+        <Title>cdl_2009</Title>
+        <SRS>epsg:5070</SRS>
+        <SRS>epsg:102004</SRS>
+        <SRS>epsg:4326</SRS>
+        <LatLonBoundingBox minx="-127.887" miny="22.9403" maxx="-65.3455" maxy="51.6051" />
+        <BoundingBox SRS="epsg:5070"
+                    minx="-2.3561e+06" miny="276915" maxx="2.25824e+06" maxy="3.17261e+06" />
+        <MetadataURL type="TC211">
+          <Format>text/xml</Format>
+          <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?request=GetMetadata&amp;layer=cdl_2009"/>
+        </MetadataURL>
+        <Style>
+          <Name>default</Name>
+          <Title>default</Title>
+          <LegendURL width="155" height="2210">
+             <Format>image/png</Format>
+             <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?version=1.1.1&amp;service=WMS&amp;request=GetLegendGraphic&amp;layer=cdl_2009&amp;format=image/png&amp;STYLE=default"/>
+          </LegendURL>
+        </Style>
+    </Layer>
+    <Layer queryable="0" opaque="0" cascaded="0">
+        <Name>cdl_2008</Name>
+        <Title>cdl_2008</Title>
+        <SRS>epsg:5070</SRS>
+        <SRS>epsg:102004</SRS>
+        <SRS>epsg:4326</SRS>
+        <LatLonBoundingBox minx="-127.887" miny="22.9403" maxx="-65.3455" maxy="51.6051" />
+        <BoundingBox SRS="epsg:5070"
+                    minx="-2.3561e+06" miny="276915" maxx="2.25824e+06" maxy="3.17261e+06" />
+        <MetadataURL type="TC211">
+          <Format>text/xml</Format>
+          <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?request=GetMetadata&amp;layer=cdl_2008"/>
+        </MetadataURL>
+        <Style>
+          <Name>default</Name>
+          <Title>default</Title>
+          <LegendURL width="155" height="2210">
+             <Format>image/png</Format>
+             <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?version=1.1.1&amp;service=WMS&amp;request=GetLegendGraphic&amp;layer=cdl_2008&amp;format=image/png&amp;STYLE=default"/>
+          </LegendURL>
+        </Style>
+    </Layer>
+    <Layer queryable="0" opaque="0" cascaded="0">
+        <Name>cdl_2007</Name>
+        <Title>cdl_2007</Title>
+        <SRS>epsg:5070</SRS>
+        <SRS>epsg:102004</SRS>
+        <SRS>epsg:4326</SRS>
+        <LatLonBoundingBox minx="-127.887" miny="26.4535" maxx="-78.0337" maxy="51.6049" />
+        <BoundingBox SRS="epsg:5070"
+                    minx="-2.35605e+06" miny="672698" maxx="1.29274e+06" maxy="3.17259e+06" />
+        <MetadataURL type="TC211">
+          <Format>text/xml</Format>
+          <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?request=GetMetadata&amp;layer=cdl_2007"/>
+        </MetadataURL>
+        <Style>
+          <Name>default</Name>
+          <Title>default</Title>
+          <LegendURL width="155" height="2210">
+             <Format>image/png</Format>
+             <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?version=1.1.1&amp;service=WMS&amp;request=GetLegendGraphic&amp;layer=cdl_2007&amp;format=image/png&amp;STYLE=default"/>
+          </LegendURL>
+        </Style>
+    </Layer>
+    <Layer queryable="0" opaque="0" cascaded="0">
+        <Name>cdl_2006</Name>
+        <Title>cdl_2006</Title>
+        <SRS>epsg:5070</SRS>
+        <SRS>epsg:102004</SRS>
+        <SRS>epsg:4326</SRS>
+        <LatLonBoundingBox minx="-125.127" miny="26.9207" maxx="-78.0337" maxy="51.6049" />
+        <BoundingBox SRS="epsg:5070"
+                    minx="-2.13815e+06" miny="672698" maxx="1.29274e+06" maxy="3.17259e+06" />
+        <MetadataURL type="TC211">
+          <Format>text/xml</Format>
+          <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?request=GetMetadata&amp;layer=cdl_2006"/>
+        </MetadataURL>
+        <Style>
+          <Name>default</Name>
+          <Title>default</Title>
+          <LegendURL width="155" height="2210">
+             <Format>image/png</Format>
+             <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?version=1.1.1&amp;service=WMS&amp;request=GetLegendGraphic&amp;layer=cdl_2006&amp;format=image/png&amp;STYLE=default"/>
+          </LegendURL>
+        </Style>
+    </Layer>
+    <Layer queryable="0" opaque="0" cascaded="0">
+        <Name>cdl_2005</Name>
+        <Title>cdl_2005</Title>
+        <SRS>epsg:5070</SRS>
+        <SRS>epsg:102004</SRS>
+        <SRS>epsg:4326</SRS>
+        <LatLonBoundingBox minx="-119.26" miny="27.7015" maxx="-82.7805" maxy="50.5683" />
+        <BoundingBox SRS="epsg:5070"
+                    minx="-1.71569e+06" miny="672675" maxx="961725" maxy="3.05987e+06" />
+        <MetadataURL type="TC211">
+          <Format>text/xml</Format>
+          <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?request=GetMetadata&amp;layer=cdl_2005"/>
+        </MetadataURL>
+        <Style>
+          <Name>default</Name>
+          <Title>default</Title>
+          <LegendURL width="155" height="2210">
+             <Format>image/png</Format>
+             <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?version=1.1.1&amp;service=WMS&amp;request=GetLegendGraphic&amp;layer=cdl_2005&amp;format=image/png&amp;STYLE=default"/>
+          </LegendURL>
+        </Style>
+    </Layer>
+    <Layer queryable="0" opaque="0" cascaded="0">
+        <Name>cdl_2004</Name>
+        <Title>cdl_2004</Title>
+        <SRS>epsg:5070</SRS>
+        <SRS>epsg:102004</SRS>
+        <SRS>epsg:4326</SRS>
+        <LatLonBoundingBox minx="-105.065" miny="24.332" maxx="-74.6823" maxy="49.2299" />
+        <BoundingBox SRS="epsg:5070"
+                    minx="-671205" miny="276915" maxx="1.60064e+06" maxy="2.91347e+06" />
+        <MetadataURL type="TC211">
+          <Format>text/xml</Format>
+          <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?request=GetMetadata&amp;layer=cdl_2004"/>
+        </MetadataURL>
+        <Style>
+          <Name>default</Name>
+          <Title>default</Title>
+          <LegendURL width="155" height="2210">
+             <Format>image/png</Format>
+             <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?version=1.1.1&amp;service=WMS&amp;request=GetLegendGraphic&amp;layer=cdl_2004&amp;format=image/png&amp;STYLE=default"/>
+          </LegendURL>
+        </Style>
+    </Layer>
+    <Layer queryable="0" opaque="0" cascaded="0">
+        <Name>cdl_2003</Name>
+        <Title>cdl_2003</Title>
+        <SRS>epsg:5070</SRS>
+        <SRS>epsg:102004</SRS>
+        <SRS>epsg:4326</SRS>
+        <LatLonBoundingBox minx="-105.065" miny="29.9129" maxx="-83.053" maxy="49.2299" />
+        <BoundingBox SRS="epsg:5070"
+                    minx="-671205" miny="810285" maxx="961725" maxy="2.91347e+06" />
+        <MetadataURL type="TC211">
+          <Format>text/xml</Format>
+          <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?request=GetMetadata&amp;layer=cdl_2003"/>
+        </MetadataURL>
+        <Style>
+          <Name>default</Name>
+          <Title>default</Title>
+          <LegendURL width="155" height="2210">
+             <Format>image/png</Format>
+             <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?version=1.1.1&amp;service=WMS&amp;request=GetLegendGraphic&amp;layer=cdl_2003&amp;format=image/png&amp;STYLE=default"/>
+          </LegendURL>
+        </Style>
+    </Layer>
+    <Layer queryable="0" opaque="0" cascaded="0">
+        <Name>cdl_2002</Name>
+        <Title>cdl_2002</Title>
+        <SRS>epsg:5070</SRS>
+        <SRS>epsg:102004</SRS>
+        <SRS>epsg:4326</SRS>
+        <LatLonBoundingBox minx="-105.065" miny="28.3381" maxx="-69.1322" maxy="49.2299" />
+        <BoundingBox SRS="epsg:5070"
+                    minx="-671205" miny="810285" maxx="2.03801e+06" maxy="2.91347e+06" />
+        <MetadataURL type="TC211">
+          <Format>text/xml</Format>
+          <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?request=GetMetadata&amp;layer=cdl_2002"/>
+        </MetadataURL>
+        <Style>
+          <Name>default</Name>
+          <Title>default</Title>
+          <LegendURL width="155" height="2210">
+             <Format>image/png</Format>
+             <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?version=1.1.1&amp;service=WMS&amp;request=GetLegendGraphic&amp;layer=cdl_2002&amp;format=image/png&amp;STYLE=default"/>
+          </LegendURL>
+        </Style>
+    </Layer>
+    <Layer queryable="0" opaque="0" cascaded="0">
+        <Name>cdl_2001</Name>
+        <Title>cdl_2001</Title>
+        <SRS>epsg:5070</SRS>
+        <SRS>epsg:102004</SRS>
+        <SRS>epsg:4326</SRS>
+        <LatLonBoundingBox minx="-105.065" miny="29.9129" maxx="-83.053" maxy="49.2299" />
+        <BoundingBox SRS="epsg:5070"
+                    minx="-671205" miny="810285" maxx="961725" maxy="2.91347e+06" />
+        <MetadataURL type="TC211">
+          <Format>text/xml</Format>
+          <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?request=GetMetadata&amp;layer=cdl_2001"/>
+        </MetadataURL>
+        <Style>
+          <Name>default</Name>
+          <Title>default</Title>
+          <LegendURL width="155" height="2210">
+             <Format>image/png</Format>
+             <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?version=1.1.1&amp;service=WMS&amp;request=GetLegendGraphic&amp;layer=cdl_2001&amp;format=image/png&amp;STYLE=default"/>
+          </LegendURL>
+        </Style>
+    </Layer>
+    <Layer queryable="0" opaque="0" cascaded="0">
+        <Name>cdl_2000</Name>
+        <Title>cdl_2000</Title>
+        <SRS>epsg:5070</SRS>
+        <SRS>epsg:102004</SRS>
+        <SRS>epsg:4326</SRS>
+        <LatLonBoundingBox minx="-104.429" miny="29.9129" maxx="-83.053" maxy="49.2299" />
+        <BoundingBox SRS="epsg:5070"
+                    minx="-623895" miny="810285" maxx="961725" maxy="2.91347e+06" />
+        <MetadataURL type="TC211">
+          <Format>text/xml</Format>
+          <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?request=GetMetadata&amp;layer=cdl_2000"/>
+        </MetadataURL>
+        <Style>
+          <Name>default</Name>
+          <Title>default</Title>
+          <LegendURL width="155" height="2210">
+             <Format>image/png</Format>
+             <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?version=1.1.1&amp;service=WMS&amp;request=GetLegendGraphic&amp;layer=cdl_2000&amp;format=image/png&amp;STYLE=default"/>
+          </LegendURL>
+        </Style>
+    </Layer>
+    <Layer queryable="0" opaque="0" cascaded="0">
+        <Name>cdl_1999</Name>
+        <Title>cdl_1999</Title>
+        <SRS>epsg:5070</SRS>
+        <SRS>epsg:102004</SRS>
+        <SRS>epsg:4326</SRS>
+        <LatLonBoundingBox minx="-104.429" miny="30.1048" maxx="-86.129" maxy="49.2299" />
+        <BoundingBox SRS="epsg:5070"
+                    minx="-623895" miny="810285" maxx="731325" maxy="2.91347e+06" />
+        <MetadataURL type="TC211">
+          <Format>text/xml</Format>
+          <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?request=GetMetadata&amp;layer=cdl_1999"/>
+        </MetadataURL>
+        <Style>
+          <Name>default</Name>
+          <Title>default</Title>
+          <LegendURL width="155" height="2210">
+             <Format>image/png</Format>
+             <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?version=1.1.1&amp;service=WMS&amp;request=GetLegendGraphic&amp;layer=cdl_1999&amp;format=image/png&amp;STYLE=default"/>
+          </LegendURL>
+        </Style>
+    </Layer>
+    <Layer queryable="0" opaque="0" cascaded="0">
+        <Name>cdl_1998</Name>
+        <Title>cdl_1998</Title>
+        <SRS>epsg:5070</SRS>
+        <SRS>epsg:102004</SRS>
+        <SRS>epsg:4326</SRS>
+        <LatLonBoundingBox minx="-104.429" miny="45.6991" maxx="-96.5531" maxy="49.2287" />
+        <BoundingBox SRS="epsg:5070"
+                    minx="-623895" miny="2.54977e+06" maxx="-42945" maxy="2.91347e+06" />
+        <MetadataURL type="TC211">
+          <Format>text/xml</Format>
+          <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?request=GetMetadata&amp;layer=cdl_1998"/>
+        </MetadataURL>
+        <Style>
+          <Name>default</Name>
+          <Title>default</Title>
+          <LegendURL width="155" height="2210">
+             <Format>image/png</Format>
+             <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?version=1.1.1&amp;service=WMS&amp;request=GetLegendGraphic&amp;layer=cdl_1998&amp;format=image/png&amp;STYLE=default"/>
+          </LegendURL>
+        </Style>
+    </Layer>
+    <Layer queryable="0" opaque="0" cascaded="0">
+        <Name>cdl_1997</Name>
+        <Title>cdl_1997</Title>
+        <SRS>epsg:5070</SRS>
+        <SRS>epsg:102004</SRS>
+        <SRS>epsg:4326</SRS>
+        <LatLonBoundingBox minx="-104.429" miny="45.6991" maxx="-96.5531" maxy="49.2287" />
+        <BoundingBox SRS="epsg:5070"
+                    minx="-623895" miny="2.54977e+06" maxx="-42945" maxy="2.91347e+06" />
+        <MetadataURL type="TC211">
+          <Format>text/xml</Format>
+          <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?request=GetMetadata&amp;layer=cdl_1997"/>
+        </MetadataURL>
+        <Style>
+          <Name>default</Name>
+          <Title>default</Title>
+          <LegendURL width="155" height="2210">
+             <Format>image/png</Format>
+             <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall?version=1.1.1&amp;service=WMS&amp;request=GetLegendGraphic&amp;layer=cdl_1997&amp;format=image/png&amp;STYLE=default"/>
+          </LegendURL>
+        </Style>
+    </Layer>
+  </Layer>
+</Capability>
+</WMT_MS_Capabilities>

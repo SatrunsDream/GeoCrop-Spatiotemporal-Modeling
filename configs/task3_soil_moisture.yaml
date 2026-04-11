@@ -1,0 +1,38 @@
+# Task 3 — Soil Moisture Anomaly Calculation
+# SMAP L4 baseline climatology + event anomaly maps
+
+study_area:
+  states: null                        # null = full CONUS (or specify for a region)
+  bbox: null
+
+smap:
+  product: SMAP_L4_SM                 # SMAP L4 surface soil moisture (9 km)
+  temporal_resolution: weekly         # daily | weekly
+  data_path: data/raw/smap/
+  variable: sm_surface                # variable name in the HDF5/NetCDF file
+
+baseline:
+  method: week_of_year                # day_of_year | week_of_year
+  period: [2015, 2021]                # years used to compute climatology (μ and σ)
+  anomaly_type: z_score               # z_score | percentile_rank | both
+
+event_window:
+  label: 2019_midwest_flood           # human-readable tag
+  start_date: "2019-04-01"
+  end_date: "2019-07-31"
+  description: "2019 Midwest / Missouri–Mississippi flooding — excess moisture event"
+
+cdl_mask:
+  year: 2019                          # CDL year to use for masking cropland
+  crop_classes:
+    cropland_general: [1, 5, 26, 28]  # corn, soybean, winter wheat, oats (example)
+  data_path: data/raw/cdl/
+  aggregation: area_weighted          # area-weighted fraction within each SMAP 9 km cell
+
+output:
+  figures_dir: artifacts/figures/task3/
+  tables_dir: artifacts/tables/task3/
+  processed_dir: data/processed/task3/
+
+run:
+  seed: 42

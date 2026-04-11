@@ -1,0 +1,48 @@
+# ── Data tiers (mostly large/licensed — do not commit) ────────────────────
+data/raw/
+data/interim/
+data/external/*.tif
+data/external/*.h5
+data/external/*.nc
+
+# ── Python cache ──────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# ── Virtual environments ──────────────────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+
+# ── Jupyter ───────────────────────────────────────────────────────────────
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# ── Secrets / credentials ─────────────────────────────────────────────────
+.env
+*.key
+*.pem
+secrets/
+
+# ── Large artifact files (keep logs and small outputs) ────────────────────
+artifacts/models/*.pkl
+artifacts/models/*.joblib
+artifacts/models/*.pt
+artifacts/models/*.h5
+artifacts/logs/runs/*/
+
+# ── OS / editor noise ─────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# ── Build ─────────────────────────────────────────────────────────────────
+dist/
+build/
+*.egg-info/

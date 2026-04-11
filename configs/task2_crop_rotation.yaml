@@ -1,0 +1,49 @@
+# Task 2 — Crop Rotation Pattern Identification
+# 10-year CDL time series — corn/soybean rotation vs. monoculture vs. irregular
+
+study_area:
+  states: [Iowa, Illinois, Indiana, Nebraska, Minnesota]
+  bbox: null
+
+cdl:
+  year_range: [2013, 2022]           # 10-year window
+  crop_classes:
+    corn: 1
+    soybean: 5
+  data_path: data/raw/cdl/
+
+rotation_metrics:
+  alternation_score:
+    enabled: true                    # fraction of adjacent-year corn↔soy transitions
+  run_length_penalty:
+    enabled: true                    # penalize long consecutive monoculture runs
+    max_run_threshold: 7             # ≥7 consecutive years = monoculture
+  pattern_distance:
+    enabled: true                    # RECRUIT-style edit distance to canonical patterns
+    canonical_patterns:
+      - [1, 5, 1, 5, 1, 5, 1, 5, 1, 5]   # corn-soy alternation
+      - [5, 1, 5, 1, 5, 1, 5, 1, 5, 1]   # soy-corn alternation
+    max_mismatches: 2
+  entropy:
+    enabled: true                    # Shannon entropy of crop sequence
+
+classification:
+  regular_rotation_threshold:
+    alternation_score_min: 0.70
+    pattern_distance_max: 3
+    min_years_in_cornsoy: 7         # out of 10 years
+  monoculture_threshold:
+    max_run_min: 7                   # or crop share ≥ 0.80
+  irregular: everything_else
+
+spatial_smoothing:
+  enabled: true
+  kernel_size: 3                     # 3×3 majority filter to reduce CDL salt-and-pepper
+
+output:
+  figures_dir: artifacts/figures/task2/
+  tables_dir: artifacts/tables/task2/
+  processed_dir: data/processed/task2/
+
+run:
+  seed: 42
