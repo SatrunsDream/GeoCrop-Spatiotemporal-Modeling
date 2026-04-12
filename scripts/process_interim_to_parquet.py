@@ -761,7 +761,8 @@ def main() -> None:
 
     parser = argparse.ArgumentParser(
         description="Export data to Parquet under data/processed/. "
-        "Use --source wms to download from WMS (no interim NetCDF needed).",
+        "Default reads data/interim/ NetCDF built from data/raw/ by build_interim_data.py. "
+        "Use --source wms only for direct WMS export (different grid than repo pipeline).",
     )
     parser.add_argument(
         "--dataset",
@@ -772,9 +773,9 @@ def main() -> None:
     parser.add_argument(
         "--source",
         choices=["interim", "wms"],
-        default="wms",
-        help="'interim' reads local NetCDF in data/interim/; "
-        "'wms' downloads directly from CropSmart / CropScape WMS.",
+        default="interim",
+        help="'interim' (default): read NetCDF from data/interim/ (from raw GeoTIFFs). "
+        "'wms': download from CropSmart / CropScape WMS (not the same as cornbelt raw stack).",
     )
     parser.add_argument(
         "--years",
