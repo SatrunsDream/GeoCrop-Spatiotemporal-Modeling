@@ -6,6 +6,12 @@ from pathlib import Path
 from typing import Any
 
 import matplotlib.patches as mpatches
+import yaml
+
+_NATURAL_EARTH_ADMIN1_110M = (
+    "https://naciscdn.org/naturalearth/110m/cultural/"
+    "ne_110m_admin_1_states_provinces.zip"
+)
 import matplotlib.pyplot as plt
 import numpy as np
 import rasterio
@@ -24,12 +30,100 @@ CLASS_COLORS = {
 }
 CLASS_LABELS = {0: "Regular rotation", 1: "Monoculture", 2: "Irregular"}
 
+# U.S. Corn Belt — 13 states (Wikipedia infobox / CRS “Corn Belt” usage).
+CORN_BELT_13_STATE_NAMES: frozenset[str] = frozenset(
+    {
+        "Illinois",
+        "Indiana",
+        "Iowa",
+        "Kansas",
+        "Kentucky",
+        "Michigan",
+        "Minnesota",
+        "Missouri",
+        "Nebraska",
+        "North Dakota",
+        "Ohio",
+        "South Dakota",
+        "Wisconsin",
+    }
+)
+
+_TASK2_CFG = Path("configs") / "task2_crop_rotation.yaml"
+
+
+def _state_names_for_task2(repo_root: Path) -> frozenset[str]:
+    cfg_path = repo_root / _TASK2_CFG
+    if not cfg_path.is_file():
+        return CORN_BELT_13_STATE_NAMES
+    try:
+        with cfg_path.open(encoding="utf-8") as f:
+            cfg = yaml.safe_load(f)
+        raw = (cfg.get("study_area") or {}).get("states")
+        if isinstance(raw, list) and raw:
+            return frozenset(str(x).strip() for x in raw if str(x).strip())
+    except Exception:
+        pass
+    return CORN_BELT_13_STATE_NAMES
+
+
+def load_cornbelt_state_boundaries_5070(
+    repo_root: str | Path,
+    *,
+    state_names: frozenset[str] | None = None,
+) -> Any | None:
+    """
+    Return state polygons in **EPSG:5070** for map overlays.
+
+    Default state list: ``study_area.states`` in ``configs/task2_crop_rotation.yaml``,
+    or the **13-state Corn Belt** if that key is missing.
+
+    Order of attempt:
+    1. First ``*.shp`` under ``data/external/states/`` (TIGER etc.), filtered by name.
+    2. **Natural Earth 110m** admin-1 (requires network on first use) — subset of U.S. states.
+
+    Returns ``None`` if ``geopandas`` is missing or both paths fail.
+    """
+    repo_root = Path(repo_root)
+    names = state_names or _state_names_for_task2(repo_root)
+    try:
+        import geopandas as gpd
+    except ImportError:
+        return None
+
+    states_dir = repo_root / "data" / "external" / "states"
+    if states_dir.is_dir():
+        shp = sorted(states_dir.glob("*.shp"))
+        if shp:
+            try:
+                g = gpd.read_file(shp[0])
+                name_col = next(
+                    (c for c in ("NAME", "NAME_1", "name", "STATE_NAME") if c in g.columns),
+                    None,
+                )
+                if name_col:
+                    sub = g[g[name_col].isin(names)].copy()
+                    if len(sub) > 0:
+                        return sub.to_crs("EPSG:5070")
+            except Exception:
+                pass
+
+    try:
+        g = gpd.read_file(_NATURAL_EARTH_ADMIN1_110M)
+        usa = g[g["adm0_a3"] == "USA"]
+        sub = usa[usa["name"].isin(names)].copy()
+        if sub.empty:
+            return None
+        return sub.to_crs("EPSG:5070")
+    except Exception:
+        return None
+
 
 def plot_rotation_class_map(
     raster_path: str | Path,
     *,
     state_shapes: Any | None = None,
-    title: str = "Crop rotation classes (CDL 2013–2022)",
+    title: str = "Crop rotation classes (CDL 2015–2024)",
     figsize: tuple[float, float] = (12, 9),
     dpi: int = 200,
     nodata: int = 255,
@@ -60,8 +154,14 @@ def plot_rotation_class_map(
     fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
     ax.imshow(rgb, extent=list(extent), origin="upper", interpolation="nearest")
 
-    if state_shapes is not None:
-        state_shapes.boundary.plot(ax=ax, color="k", linewidth=0.4, alpha=0.6)
+    if state_shapes is not None and not getattr(state_shapes, "empty", True):
+        state_shapes.boundary.plot(
+            ax=ax,
+            color="#1a1a1a",
+            linewidth=1.1,
+            alpha=0.9,
+            zorder=10,
+        )
 
     patches = [
         mpatches.Patch(color=CLASS_COLORS[c], label=CLASS_LABELS[c])

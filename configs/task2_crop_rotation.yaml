@@ -2,15 +2,30 @@
 # 10-year CDL time series — corn/soybean rotation vs. monoculture vs. irregular
 
 study_area:
-  states: [Iowa, Illinois, Indiana, Nebraska, Minnesota]
+  # 13-state U.S. Corn Belt (common USDA / Wikipedia definition; aligns with configs/study_extent.yaml)
+  states:
+    - Illinois
+    - Indiana
+    - Iowa
+    - Kansas
+    - Kentucky
+    - Michigan
+    - Minnesota
+    - Missouri
+    - Nebraska
+    - North Dakota
+    - Ohio
+    - South Dakota
+    - Wisconsin
   bbox: null
 
 cdl:
-  year_range: [2013, 2022]           # 10-year window
+  year_range: [2015, 2024]           # 10-year window (inclusive)
   crop_classes:
     corn: 1
     soybean: 5
-  data_path: data/raw/cdl/
+  # Notebooks load CDL via ``src.io.cdl_parquet`` → ``data/processed/cdl/`` (not raw GeoTIFFs).
+  data_path: data/processed/cdl/
 
 # Pixels must appear as corn or soy in at least this many years to enter
 # ``rotation_metrics.parquet`` (rotation-eligible denominator). Reduces noise
@@ -49,6 +64,8 @@ spatial_smoothing:
 output:
   figures_dir: artifacts/figures/task2/
   tables_dir: artifacts/tables/task2/
+  # NB05 areal CSV + JSON (and run_bundle pointers): for Task 4 / report tables, not GeoTIFFs
+  task4_tables_dir: artifacts/tables/task4/
   processed_dir: data/processed/task2/
 
 run:

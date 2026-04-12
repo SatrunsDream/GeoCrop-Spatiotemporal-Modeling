@@ -1,22 +1,24 @@
 # Task 2 — Results and interpretation (crop rotation from CDL)
 
 **Last updated:** 2026-04-11  
-**Analysis window:** CDL years **2013–2022** (10 years), processed wide Parquet + spatial metadata from `data/processed/cdl/`.  
-**Pipeline:** Notebooks **02→05** executed via `python -m jupyter nbconvert --execute` (non-interactive `MPLBACKEND=Agg`), after `python scripts/build_task2_notebooks.py`.
+**Analysis window:** CDL years **2015–2024** (10 years, inclusive), processed wide Parquet + spatial metadata from `data/processed/cdl/`.  
+**Pipeline:** Notebooks **01→05** in `notebooks/task2_crop_rotation/` (run **02→05** for metrics onward after CDL is loaded). Prefer `jupyter nbconvert --execute` or run cells top-to-bottom.
 
 ---
 
 ## 0. Executive summary (diagnostic read)
 
-1. **Denominator shift matters.** There are **530,472** pixels that were **ever** corn or soy in the decade; **301,485 (56.8%)** meet the **rotation-eligibility** rule (corn or soy in **≥5** of 10 years, YAML `rotation_eligibility.min_cornsoy_years_for_metrics`). All metrics, classification shares, and sensitivity tables below use the **eligible** set unless stated otherwise.
+**Data run:** **2026-04-11** | **13-state Corn Belt** (IL, IN, IA, KS, KY, MI, MN, MO, NE, ND, OH, SD, WI) | **2,084,112** rotation-eligible pixels (corn or soy in **≥5** of 10 years, YAML `rotation_eligibility.min_cornsoy_years_for_metrics`). Grid resolution for the latest WMS-derived stack is **~557 m** (~**31 ha** per analysis cell — confirm `approx_grid_resolution_m` and `pixel_area_ha` in the dated `artifacts/tables/task4/task2__areal_stats_by_class__*__metadata.json`).
 
-2. **Strict composite classification is selective, not “broken.”** Under the primary YAML rule (alternation ≥ **0.70**, Hamming distance ≤ **3**, corn/soy years ≥ **7**, and not monoculture), **~16.5%** of eligible pixels are **regular rotation**, **~26.5%** **monoculture**, and **~57%** **irregular** (`rotation_metrics_classified.parquet`). The **smoothed GeoTIFF** export shows **~17.3% / 27.6% / 55.2%** (small edge effect from 3×3 majority filter). These are **internally consistent**; the story is **definition + simultaneous thresholds**, not a pipeline bug.
+1. **Denominator.** All NB02–NB05 tables use this **eligible** pool (not CONUS, not native 30 m field census).
 
-3. **Threshold sensitivity recovers “survey-like” fractions.** Relaxing only `alternation_min` and `pattern_dist_max` (holding `cs_min` and monoculture rules fixed) shows, for example, **~41.6% regular** at **(0.50, 5)** and **~44.3%** at **(0.50, 6)** (`artifacts/tables/task2/task2__threshold_sensitivity_grid.csv`). Use **strict** numbers as the **primary** headline; use the **sweep** in the report to answer **which metric combination is informative** and to relate to **USDA survey rotation** (~50–60% of Iowa cropland in *some* corn–soy rotation — a different definition and scale).
+2. **Strict primary classification (YAML).** `classify_batch` assigns **0 = regular**, **1 = monoculture**, **2 = irregular**. On the **raw** class GeoTIFF, the 2026-04-11 run is about **28% / 6% / 66%** (regular / monoculture / irregular), matching the **(0.70, 3)** column of the sensitivity pivot (~**28.15%** regular). The **smoothed** GeoTIFF (3×3 majority) is the preferred **map and areal** headline for the report: **27.36%** regular, **3.90%** monoculture, **68.74%** irregular (**2,084,112** valid cells). Smoothing **relabels edge pixels**; it does not invert the class legend.
 
-4. **Markov structure matches agronomic intuition at the transition level.** On eligible pixels, **P(corn→corn) ≈ 0.57** and **P(corn→soy) ≈ 0.31** (corn tends to **persist**); **P(soy→corn) ≈ 0.76** and **P(soy→soy) ≈ 0.10** (after soy, **return to corn** dominates). That is **consistent with a corn-heavy two-year logic** mixed with **other crops** and label noise — even when the strict **10-year Hamming** label is often “irregular.”
+3. **Threshold sensitivity.** `pct_monoculture` is **constant across all 20** `(alternation_min, pattern_dist_max)` rows (orthogonality). Example pivot from the same run: **~60%** regular at **(0.50, 6)** vs **~28%** at strict **(0.70, 3)**. Cite the saved `task2__threshold_sensitivity_grid.csv` after each re-run.
 
-5. **Geography of *this* stack vs Corn Belt narrative.** Pixel centroids fall near **longitude −105.6 to −98.2** (all **west** of the **−96.35°W** proxy used for Iowa vs Nebraska in Notebook 05). The **per-region CSV** therefore has a **single** bucket (`Nebraska_proxy_west`) covering **all** classified pixels — not because the code failed, but because **no pixel lies east of that meridian** in the current extent. **Map text annotations** (Platte / Iowa belt) are **illustrative** for the report rubric; for a **literal** Iowa–Nebraska contrast, **extend or re-center the CDL stack** and/or use **state polygons** that intersect the raster footprint.
+4. **Markov (corn / soy / other).** Transition mass **changes** when the footprint expands from a Nebraska-heavy subset to the **full Belt** — re-read `artifacts/tables/task2/task2__markov_transition_probs.csv` after each full pipeline refresh. **P(other→other)** persistence (~**0.52** in the 2026-04-11 interpretation) explains why strict **Hamming + alternation** leaves a **large irregular** class.
+
+5. **Geography.** NB05 **per-state** table is the lead communication product (Illinois and Iowa lead **% regular**; Nebraska leads **% monoculture** in the 2026-04-11 export). NB04 adds **four** map callouts (eastern core, Plains monoculture, northern small-grain / other-crop fringe, east–west gradient). Figure **`task2__per_state_rotation_classes.png`** is written at the end of NB05.
 
 ---
 
@@ -33,8 +35,8 @@
 
 **Denominators**
 
-1. **Ever corn/soy** — ≥1 year as corn or soy (**n = 530,472**): used in NB02 only for the **`n_cornsoy_years` histogram** before filtering.  
-2. **Rotation-eligible** — ≥**5** years as corn or soy (**n = 301,485**): rows in `rotation_metrics.parquet`, classification, sensitivity, and Markov aggregates.
+1. **Ever corn/soy** — used in NB02 for the **`n_cornsoy_years` histogram** before filtering (count updates with stack extent).  
+2. **Rotation-eligible** — ≥**5** years as corn or soy (**n = 2,084,112** on the 2026-04-11 13-state run): rows in `rotation_metrics.parquet`, classification, sensitivity, Markov, and NB05.
 
 **Classification rules** (`configs/task2_crop_rotation.yaml`)
 
@@ -44,91 +46,90 @@
 
 ---
 
-## 2. Numeric results (this run)
+## 2. Numeric results (13-state run, 2026-04-11)
 
-### 2.1 Metric summaries — **rotation-eligible** pixels only (`rotation_metrics.parquet`, n = 301,485)
+### 2.0 Raw vs smoothed — there is no 40-point “class swap” bug
 
-| Metric | Mean | Median | Notes |
-|--------|------|--------|--------|
-| alternation_score | **0.47** | **0.50** | After eligibility, the median is no longer stuck at zero: pixels with very few corn/soy years (no transitions) were removed. |
-| max_run_length | 3.7 | 3 | Typical longest run remains modest. |
-| pattern_edit_distance | **4.4** | **5** | Still **far** from perfect alternation (0); Hamming to a strict 10-step template remains **harsh** for CDL mixed sequences. |
-| entropy | 1.13 | 1.0 | Moderate label diversity. |
-| n_cornsoy_years | **8.4** | **9** | Eligibility + classification both push toward **corn/soy-heavy** years. |
-| crop_share | 0.64 | 0.60 | Modal crop dominates most years on average. |
+Notebook 03 previously printed `value_counts(normalize=True).to_dict()`, which shows **numeric keys** (`0.0`, `1.0`, `2.0`) **unsorted**. **Always map keys by code:** **0 → regular**, **1 → monoculture**, **2 → irregular** (`rotation_classifier.classify_batch`). Misreading `{2.0: 0.66, ...}` as “66% regular” caused a false alarm; **66% is irregular**. NB03 cell output is now **explicitly labeled**; NB05 uses the same legend.
 
-### 2.2 Class distribution — primary YAML (`rotation_metrics_classified.parquet`)
+### 2.1 Metric summaries — rotation-eligible (`rotation_metrics.parquet`, n = 2,084,112)
 
-| Class | Code | Share of **eligible** pixels |
+Re-run NB02 after large stack changes and paste refreshed means/medians here. Qualitatively, eligible pixels remain **corn/soy heavy** with **median alternation 0.5** and **pattern distance** mass **above** the strict **≤3** cutoff — so **strict regular** stays a **minority** class.
+
+### 2.2 Class distribution — primary YAML (matches raw GeoTIFF, before spatial smoothing)
+
+| Class | Code | Share of **eligible** pixels (approx., 2026-04-11) |
 |-------|------|--------------------------------|
-| Regular rotation | 0 | **~16.5%** |
-| Monoculture | 1 | **~26.5%** |
-| Irregular | 2 | **~57.0%** |
+| Regular rotation | 0 | **~28%** |
+| Monoculture | 1 | **~6%** |
+| Irregular | 2 | **~66%** |
 
-### 2.3 Areal summary — **smoothed** GeoTIFF (`task2__areal_stats_by_class__20260411.csv`)
+(`rotation_metrics_classified.parquet` column `rotation_class` uses the same coding.)
 
-Footprint = **classified cells only** on the **analysis grid** (~**10.22 ha/pixel**, ~**320 m** effective cell size, NAD83 / Conus Albers — see companion `*__metadata.json`). **Not** native 30 m USDA field area.
+### 2.3 Areal summary — **smoothed** GeoTIFF (NB05; authoritative for report headline)
+
+Use the dated `artifacts/tables/task4/task2__areal_stats_by_class__YYYYMMDD.csv` next to its `*__metadata.json` for **pixel_area_ha** and CRS. **2026-04-11** values:
 
 | Class | Pixel count | Area (10³ ha) | % of valid cells |
-|-------|-------------|-----------------|------------------|
-| regular_rotation | 52,080 | ~532 | **17.27%** |
-| monoculture | 83,069 | ~849 | **27.55%** |
-| irregular | 166,337 | ~1,700 | **55.17%** |
-| **Total** | **301,485** | **~3.08 × 10⁶ ha** | 100% |
+|-------|-------------|----------------|------------------|
+| regular_rotation | 570,202 | ~17,669 | **27.36%** |
+| monoculture | 81,308 | ~2,520 | **3.90%** |
+| irregular | 1,432,602 | ~44,393 | **68.74%** |
+| **Total** | **2,084,112** | **~64,582** | 100% |
 
-### 2.4 Markov transitions — corn / soy / other (`task2__markov_transition_probs.csv`)
+### 2.4 Markov transitions — corn / soy / other
 
-Row = **from** (year t), column = **to** (year t+1). Values are **empirical P(to | from)** across all eligible pixel-years.
-
-| From \\ To | corn | soy | other |
-|------------|------|-----|-------|
-| corn | **0.57** | **0.31** | 0.11 |
-| soy | **0.76** | 0.10 | 0.14 |
-| other | 0.54 | 0.12 | 0.35 |
-
-**Read:** Strong **soy → corn** and **corn → corn** mass; **corn → soy** is substantial but **below 0.5**, so the matrix does **not** look like a perfect two-state alternator — consistent with **continuous corn**, **third crops**, and **CDL noise** at coarse resolution.
+Row = **from** (year t), column = **to** (year t+1). Values are **empirical P(to | from)** across all eligible pixel-years in `task2__markov_transition_probs.csv`. **Re-open the CSV after each full re-run** — the 13-state footprint shifts transition mass relative to an older Nebraska-only stack.
 
 ### 2.5 Threshold sensitivity (excerpt — full grid in CSV)
 
-Same **301,485** pixels; only **alternation_min** and **pattern_dist_max** vary; **cs_min = 7** and monoculture rule unchanged.
+Same **2,084,112** pixels; only **alternation_min** and **pattern_dist_max** vary; **`cs_min` = 7** and monoculture rule unchanged. **Monoculture % is identical on every row** (see CSV). Example from the 2026-04-11 notebook pivot (`% regular` of eligible):
 
-| alternation_min | pattern_dist_max | % regular | % monoculture | % irregular |
-|-----------------|------------------|-----------|----------------|---------------|
-| 0.70 | 3 | **16.48** | 26.46 | 57.06 |
-| 0.60 | 4 | 28.11 | 26.46 | 45.43 |
-| 0.50 | 5 | **41.56** | 26.46 | 31.98 |
-| 0.50 | 6 | **44.32** | 26.46 | 29.21 |
+| alternation_min | pattern_dist_max | % regular |
+|-----------------|------------------|-----------|
+| 0.70 | 3 | **28.15** |
+| 0.70 | 6 | **39.37** |
+| 0.50 | 5 | **56.58** |
+| 0.50 | 6 | **60.33** |
 
 **Figure:** `artifacts/figures/task2/task2__threshold_sensitivity_regular_pct.png`.
 
-**Monoculture column:** `% monoculture` is **identical (26.46%)** for every row in the full 20-row grid — the monoculture rule depends only on **run length** and **crop share**, not on `alternation_min` or `pattern_dist_max`.
+### 2.6 Per-state table (Notebook 05, strict classes on **eligible** pixels)
 
-### 2.6 Per-region table (Notebook 05)
+Example **2026-04-11** rows (re-run NB05 for dated CSV). Excerpt:
 
-`task2__areal_stats_by_region__20260411.csv` currently lists **one** region because **every** eligible pixel centroid lies **west** of the **−96.35°W** proxy meridian (see §0). For a **meaningful Iowa vs Nebraska split**, align the **raster extent** with both states or use **polygons** that intersect the grid.
+| State | % regular | % monoculture | % irregular |
+|-------|-----------|----------------|---------------|
+| Illinois | 40.35 | 5.07 | 54.58 |
+| Iowa | 39.87 | 6.93 | 53.20 |
+| Indiana | 34.29 | 4.23 | 61.48 |
+| Minnesota | 31.31 | 3.26 | 65.43 |
+| Nebraska | 27.13 | 11.96 | 60.91 |
+| Kansas | 14.24 | 8.11 | 77.65 |
+| North Dakota | 11.29 | 2.81 | 85.90 |
 
-### 2.7 Novel findings from existing outputs (Findings A–F)
+**Figure:** `artifacts/figures/task2/task2__per_state_rotation_classes.png` (stacked horizontal bars, end of NB05).
 
-These are **interpretive** layers on artifacts already in the repo (no new downloads). Exact percentages update if you re-run NB02/03; values below match the **2026-04-11** run.
+### 2.7 Novel findings (report hooks)
 
-| ID | Source | Takeaway | Report hook |
-|----|--------|----------|---------------|
-| **A** | `task2__markov_transition_probs.csv` | **P(soy→corn) ≈ 0.76** vs **P(corn→soy) ≈ 0.31** → asymmetry ratio **~2.4×**. Soy acts as a **break** before returning to corn dominance, not as a symmetric 50/50 alternation partner (contrast symmetric C↔S narrative in much of the literature). | Q3 (which combinations are informative), innovation |
-| **B** | `task2__threshold_sensitivity_grid.csv` | **pct_monoculture = 26.46%** on **all 20** threshold pairs — monoculture is **orthogonal** to the alternation–Hamming sweep; taxonomy has a **persistence axis** (run/share) separate from a **template-match axis** (alt + distance). | Q3 |
-| **C** | Same sensitivity CSV | **Strict (0.70, 3):** regular **<** monoculture (~16.5% vs ~26.5%). **Relaxed (0.50, 4):** regular **>** monoculture (~33.6% vs ~26.5%). A **crossover / balance band** sits near **(0.60–0.65, dist_max 4)** where both classes are ~27–28% — useful **calibration** language. | Q4 (irregular / metric behavior) |
-| **D** | Markov `other` row | **P(other→corn) ≈ 0.54** vs **P(other→soy) ≈ 0.12** — “other” CDL years are usually **short interruptions** before corn again; supports **entropy > 1 bit** without implying long diversified rotations. | Q4 |
-| **E** | `task2__markov_transition_counts.csv` row sums | Share of **all** eligible pixel-year transitions by **origin** state ≈ **61% corn / 22% soy / 16% other** (volume ratio corn:soy ~**2.7:1** on this stack). Explains why **strict regular** remains a **minority** class on a **corn-heavy** footprint. | Q5 (decision support / agronomic calibration) |
-| **F** | `max_run_length` in `rotation_metrics.parquet` | Discrete **run-length** distribution (`task2__runlength_distribution.png`) shows how mass sits below vs in the **≥7** monoculture rule zone — supports the monoculture **story** beyond a single scalar %. | Methods / monoculture |
+| ID | Takeaway |
+|----|-----------|
+| **A** | **Illinois vs Iowa** neck-and-neck on **% strict regular** (~0.5 pp); **Nebraska** highest **% monoculture** — consistent with **irrigated continuous corn** vs **rain-fed rotation** framing (Q5). |
+| **B** | **Northern / Lakes states** (e.g. ND, WI, MI) show very high **% irregular** — agronomically expected (more small grains, hay, other); including them shows the **rule set is geography-sensitive**, not a bug (Q3). |
+| **C** | **Monoculture concentration:** Nebraska + Kansas carry a **disproportionate share** of all monoculture pixels in the Belt (recompute from NB05 CSV for exact %). |
+| **D** | **Markov asymmetry is footprint-dependent** — compare Nebraska-only vs full-Belt CSVs when arguing **scale** (Q3). |
+| **E** | **P(other→other)** persistence explains the bridge from **CDL “other” years** to **high irregular %** under strict templates (Q4). |
+| **F** | **Orthogonality:** monoculture % **flat** across the 20 sensitivity rows — **persistence axis** vs **template-match axis** (Q3). |
 
 ---
 
 ## 3. Interpretation (what this means)
 
-1. **Methodology is coherent.** Parquet metrics, `classify_batch` labels, GeoTIFF fills, areal CSV, sensitivity CSV, and Markov exports **tell one story**: strict **intersection** of rules yields a **modest regular class**; **relaxing** distance and alternation thresholds **monotonically** expands that class toward **literature-reported rotation prevalence** at the cost of **precision**.
+1. **Methodology is coherent.** Parquet metrics, `classify_batch` labels, GeoTIFF fills, areal CSV, sensitivity CSV, and Markov exports **tell one story**: strict **intersection** of rules yields **~28% regular** on the raw class map for the 13-state run (still a **minority** vs **~66% irregular**); **relaxing** distance and alternation thresholds **monotonically** expands regular share toward **~60%** at the relaxed corner of the grid.
 
-2. **Eligibility (≥5 corn/soy years)** removed the **noisiest tail** of the ever pool (pixels with only 1–2 touch years). That **raised** interpretability of alternation and edit distance (median alternation **0.5** vs the old ever-pool **0** median) and **increased** the strict regular share vs the historical **~9%** “ever only” run — still **not** majority regular, because **Hamming ≤3** + **alternation ≥0.7** + **≥7** corn/soy years is **demanding**.
+2. **Eligibility (≥5 corn/soy years)** removes the noisiest tail (pixels with only 1–2 corn/soy touch years). On the expanded Corn Belt grid, **~2.08M** eligible pixels remain **heterogeneous by state** — per-state tables are essential so Nebraska monoculture and northern “other-crop” irregularity are not averaged into a single misleading headline.
 
-3. **Monoculture share ~27%** is **plausible** for continuous corn, long runs, or high modal crop share under CDL at **~320 m**.
+3. **Smoothed monoculture ~4%** on the analysis grid reflects **strict** monoculture rules (long runs / very high modal share) at **coarse** resolution; most pixels fail strict **regular** without meeting **monoculture**, so they land in **irregular**.
 
 4. **Maps and annotations** are best used as **communication** tools; tie **claims** to **actual bbox** and **metadata.json** so reviewers do not confuse **grid footprint** with **USDA NASS acreage**.
 
@@ -139,7 +140,7 @@ These are **interpretive** layers on artifacts already in the repo (no new downl
 | Dimension | Assessment |
 |-----------|------------|
 | **Reproducibility / methodology** | **Strong:** config-driven rules, documented denominators, sensitivity sweep, Markov layer, metadata JSON, executable notebooks (nbformat-valid for `nbconvert`). |
-| **Plausibility vs surveys** | **Good if framed correctly:** strict **~16–17% regular** is **low vs farmer-reported rotation intent**; **relaxed (0.5, 5–6)** brings **~42–44% regular**, which **bridges** survey language. State that explicitly in the report. |
+| **Plausibility vs surveys** | **Good if framed correctly:** strict **~27–28% regular** (smoothed / raw) is still **below** farmer-reported *any* corn–soy rotation prevalence; **relaxed (0.5, 6)** on this stack reaches **~60% regular** — use **strict** for the headline definition and **sweep** for calibration vs survey language. |
 | **External validation** | **Not strong** — no independent field rotation labels in-repo; literature comparison is the right substitute. |
 
 **Bottom line:** The run is **submission-ready** for **methods + sensitivity + honesty about scale**. It is **not** “validated strong” against ground truth until you add **external** or **independent** labels.
@@ -148,10 +149,10 @@ These are **interpretive** layers on artifacts already in the repo (no new downl
 
 ## 5. How to improve (short list)
 
-1. **Geography:** extend CDL processing to a bbox that includes **eastern Nebraska + Iowa**, or drive NB05 from **state polygons** that intersect the stack; **retire or relocate** the **−96.35°W** proxy if it does not split your extent.  
+1. **Geography:** NB05 already uses **state polygons** for the full **13-state** list; extend or re-center the **CDL stack** if you want more states represented in the footprint or richer cross-state comparison.  
 2. **Report text:** one paragraph linking **strict** vs **relaxed** sweep to **USDA NASS** definitions (Q3/Q4).  
 3. **Optional:** unit tests for small **synthetic** sequences against known Markov counts; keep **seaborn** out of NB02 so **minimal** envs still run (current NB02 uses **matplotlib** only).  
-4. **Out of scope (per project brief):** full 30 m five-state re-download, CSB polygon join, replacing the entire metric family before the deadline.
+4. **Out of scope (per project brief):** full native **30 m** re-download at continental scale, CSB polygon join, replacing the entire metric family before the deadline.
 
 ---
 
@@ -160,13 +161,14 @@ These are **interpretive** layers on artifacts already in the repo (no new downl
 | Path | Role |
 |------|------|
 | `data/processed/task2/rotation_metrics.parquet` | Eligible-only metrics. |
-| `data/processed/task2/task2__markov_transition_{counts,probs}.csv` | Markov aggregates. |
+| `artifacts/tables/task2/task2__markov_transition_{counts,probs}.csv` | Markov aggregates (NB02). |
 | `data/processed/task2/rotation_metrics_classified.parquet` | Metrics + `rotation_class`. |
 | `data/processed/task2/rotation_class_map*.tif` | Raw + smoothed rasters. |
 | `artifacts/tables/task2/task2__threshold_sensitivity_grid.csv` | Full sensitivity grid. |
-| `artifacts/tables/task2/task2__areal_stats_by_class__*.csv` | Areal by class. |
-| `artifacts/tables/task2/task2__areal_stats_by_class__*__metadata.json` | `pixel_area_ha`, ~320 m resolution note, CRS. |
-| `artifacts/tables/task2/task2__areal_stats_by_region__*.csv` | Regional % (when extent supports split). |
+| `artifacts/tables/task4/task2__areal_stats_by_class__*.csv` | Areal by class (NB05). |
+| `artifacts/tables/task4/task2__areal_stats_by_class__*__metadata.json` | `pixel_area_ha`, `approx_grid_resolution_m`, CRS. |
+| `artifacts/tables/task4/task2__areal_stats_by_region__*.csv` | Per-state Corn Belt % (+ `outside_configured_states` / fallback). |
+| `artifacts/figures/task2/task2__per_state_rotation_classes.png` | Stacked bar chart of class mix by state (NB05). |
 | `artifacts/figures/task2/task2__ncornsoy_histogram.png` | Eligibility cutoff visualization. |
 | `artifacts/figures/task2/task2__markov_corn_soy_other.png` | Markov heatmap. |
 | `artifacts/figures/task2/task2__threshold_sensitivity_regular_pct.png` | Sensitivity lines. |
@@ -182,4 +184,50 @@ These are **interpretive** layers on artifacts already in the repo (no new downl
 - `configs/task2_crop_rotation.yaml` — thresholds and year window.  
 - `context/RISKS.md` — CDL label noise, scale mismatch.  
 - `context/structure.md` — artifact index and per-notebook log.  
-- `context/STATUS.md` — project phase checklist.
+- `context/STATUS.md` — project phase checklist.  
+- `context/TASK2_NAFSI_DATA_CONTRACT.md` — processed CDL/NDVI naming, artifact layout, NAFSI rigor checklist.
+
+---
+
+## 8. NAFSI / research brief alignment (what Task 2 does and does not answer)
+
+This section maps common **Track 1–style judging prompts** to Task 2. The **supervised crop-type prediction** checklist (multi-year features, held-out label year, OA / F1 / confusion matrix, feature-importance ablations vs NDVI and SMAP) is **out of scope for Task 2** and is planned under **Task 4** (`context/PROJECT_BRIEF.md`, `context/STATUS.md`). Task 2 is a **transparent, config-driven rotation analysis** on CDL time series, not a trained pixel classifier for a test year.
+
+### 8.1 Task 2 analysis pipeline (notebook chain)
+
+```mermaid
+flowchart LR
+  NB01["NB01\nCDL load"] --> NB02["NB02\nmetrics + Markov"]
+  NB02 --> NB03["NB03\nclassify + GeoTIFF"]
+  NB03 --> NB04["NB04\nmaps"]
+  NB03 --> NB05["NB05\nareal + bundle"]
+```
+
+**Inputs:** `data/processed/cdl/` wide Parquet + spatial metadata; YAML `configs/task2_crop_rotation.yaml` (years **2015–2024**, eligibility, classification thresholds, 13-state study list). **Outputs:** `rotation_metrics.parquet`, Markov CSVs, `rotation_metrics_classified.parquet`, rotation GeoTIFFs, figures and tables under `artifacts/` (see §6). **End-to-end project** flow (all tasks + data spine) is diagrammed in `context/PROJECT_BRIEF.md`.
+
+### 8.2 “Feature matrix,” labels, and metrics (rubric language)
+
+| Rubric idea | Task 2 analogue | Notes |
+|-------------|-----------------|-------|
+| Multi-year CDL as **information** | Ten-year **per-pixel** CDL codes → engineered metrics (alternation, run length, pattern distance to ideal alternation, entropy, `n_cornsoy_years`) | Implemented in NB02 / `src` rotation logic — not the same as a tabular **X** matrix for sklearn. |
+| **Labels** from CDL | **Rule-based** labels: regular rotation (0), monoculture (1), irregular (2) from YAML thresholds — not “true crop in 2023” vs predicted | No held-out **year** for train/test; the full window is used to **describe** sequence structure. |
+| Overall accuracy, F1, confusion matrix | **Not produced** for Task 2 | Those metrics require a **supervised crop-type** model (Task 4). Task 2 reports **class shares**, **sensitivity** to thresholds, and **Markov** transition structure instead. |
+| Feature importance (NDVI, SMAP) | **Not applicable** — Task 2 pipeline is **CDL-only** (`context/TASK2_NAFSI_DATA_CONTRACT.md` §2) | **Quantified added value of NDVI/SMAP vs CDL-only** for **crop-type** accuracy is a **Task 4** ablation; Task 2 does not claim or measure it. |
+
+### 8.3 Irregular crop rotation patterns (interpretation Task 2 *can* support)
+
+The brief’s question *“How does your crop type prediction model perform on fields with irregular rotation?”* targets **Task 4**. Task 2 still gives **rotation-centric** evidence useful for the report:
+
+1. **Definition:** Under the primary YAML rule set, on the **13-state** 2026-04-11 run, **about two thirds** of **rotation-eligible** pixels are labeled **irregular** on the smoothed map (§2.3) — sequences that fail strict alternation-and-template tests while still having enough corn/soy years to matter agronomically.  
+2. **Mechanism:** Markov tables show substantial **“other” crop** mass and **asymmetric** corn↔soy transitions (`task2__markov_transition_*.csv`, figures in §6), consistent with CDL noise, third crops, and **non-alternating** management — i.e. the same phenomena that make **pixel-year crop classification** hard in irregular systems.  
+3. **Bridge to Task 4 (when built):** Pixels with **high irregularity** or high **other**-transition rates are plausible **strata** for reporting **separate** confusion matrices or F1 by rotation stability — that is an **extension**, not implemented here.
+
+### 8.4 Visualizations and metrics “for judges” (Task 2)
+
+- **Maps:** smoothed/raw rotation class GeoTIFFs exported to PNG (NB04) with **13-state** boundary context.  
+- **Tables:** areal stats by class + metadata JSON; **per-state** shares (NB05); threshold sensitivity grid; Markov counts/probabilities.  
+- **Interpretive context:** strict vs relaxed operating points (§0, §2), limitations on **grid vs native 30 m** acreage (§3, metadata), and **no external rotation ground truth** (§4).
+
+### 8.5 Model limitations and generalizability (Task 2 framing)
+
+Task 2 does not export a **fitted ML model**. **Limitations** include: CDL classification error and temporal inconsistency at **coarse analysis resolution** (order **~550 m** in the latest 13-state export — see metadata JSON); sensitivity of “regular” share to **documented** thresholds; pixels outside state polygons (`outside_configured_states` in NB05). **Generalizability:** metrics and code are **portable** to other years and bbox extents if the processed Parquet and YAML are updated; **numeric shares are not** transferable across regions without re-running the pipeline on those data.

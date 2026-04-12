@@ -2,7 +2,21 @@
 # Temporal split: train year<=2021, val=2022, test=2023 (panel rows include2013–2022 for train/val)
 
 study_area:
-  states: [Iowa, Illinois, Indiana, Nebraska, Minnesota]
+  # Same 13-state Corn Belt as task2 / study_extent.yaml
+  states:
+    - Illinois
+    - Indiana
+    - Iowa
+    - Kansas
+    - Kentucky
+    - Michigan
+    - Minnesota
+    - Missouri
+    - Nebraska
+    - North Dakota
+    - Ohio
+    - South Dakota
+    - Wisconsin
   bbox: null
 
 # Model labels (integer): 0=other_cropland, 1=corn, 2=soy, 3=winter_wheat

@@ -158,9 +158,10 @@ artifacts/
 
 | Path | Description |
 |------|-------------|
-| `artifacts/tables/task2/task2__areal_stats_by_class__20260411.csv` | Areal summary by rotation class (grid ha) |
-| `artifacts/tables/task2/task2__areal_stats_by_class__20260411__metadata.json` | `pixel_area_ha`, ~320 m grid note, CRS, disclaimer vs 30 m CDL |
-| `artifacts/tables/task2/task2__areal_stats_by_region__20260411.csv` | Class % by region (state join or lon proxy) |
+| `artifacts/tables/task2/task2__markov_transition_{counts,probs}.csv` | Markov transition tables (NB02) |
+| `artifacts/tables/task4/task2__areal_stats_by_class__*.csv` | Areal summary by rotation class (grid ha); NB05 |
+| `artifacts/tables/task4/task2__areal_stats_by_class__*__metadata.json` | `pixel_area_ha`, grid resolution, CRS, disclaimer vs 30 m CDL |
+| `artifacts/tables/task4/task2__areal_stats_by_region__*.csv` | Class % by state (13-state join) |
 | `artifacts/tables/task2/task2__threshold_sensitivity_grid.csv` | Full `alternation_min` × `pattern_dist_max` class shares |
 
 ### Models
@@ -215,7 +216,7 @@ artifacts/
 ### Task 2 — Crop Rotation
 
 #### notebooks/task2_crop_rotation/01_cdl_timeseries_loading.ipynb
-- **Purpose:** Load **processed** CDL wide Parquet for 2013–2022; sanity-check grid and corn/soy prevalence by year.
+- **Purpose:** Load **processed** CDL wide Parquet for 2015–2024; sanity-check grid and corn/soy prevalence by year.
 - **Inputs:** `data/processed/cdl/cdl_stack_wide.parquet`, `cdl_stack_spatial_metadata.json`, `configs/task2_crop_rotation.yaml`
 - **Outputs:** `artifacts/figures/task2/task2__cornsoy_fractions_by_year__*.png`
 - **Key findings:** See `context/TASK2_RESULTS.md` §2–3. Corn/soy fractions vary by year; grid ~1520×2048, EPSG:5070, ~10.2 ha/cell.
@@ -224,7 +225,7 @@ artifacts/
 #### notebooks/task2_crop_rotation/02_rotation_metrics_computation.ipynb
 - **Purpose:** Metrics on **ever** corn/soy stack; **eligibility** (≥5 corn/soy years); save **eligible-only** `rotation_metrics.parquet`; Markov 3×3; transition-volume printout; asymmetry bar chart; run-length discrete bars; metric plots.
 - **Inputs:** Same CDL Parquet slice; `src.modeling.rotation_classifier`
-- **Outputs:** `rotation_metrics.parquet`, `task2__markov_transition_*.csv`, `task2__ncornsoy_histogram.png`, `task2__transition_asymmetry.png`, `task2__runlength_distribution.png`, metric figures
+- **Outputs:** `rotation_metrics.parquet`; Markov CSVs under `artifacts/tables/task2/`; figures `task2__ncornsoy_histogram.png`, `task2__transition_asymmetry.png`, `task2__runlength_distribution.png`, metric plots
 - **Key findings:** ~530k ever → **~301k eligible**; median alternation **0.5** on eligible pool; Markov shows sticky corn and soy→corn (`context/TASK2_RESULTS.md`).
 - **Next steps:** Align grid with Iowa+Nebraska if regional narrative is required.
 
@@ -236,18 +237,18 @@ artifacts/
 - **Next steps:** Report = strict primary + sensitivity figure; cite USDA definitions when comparing.
 
 #### notebooks/task2_crop_rotation/04_spatial_mapping_rotation.ipynb
-- **Purpose:** Publication-style maps from classified GeoTIFFs.
-- **Inputs:** Smoothed/raw rotation rasters; optional `data/external/states/`
+- **Purpose:** Publication-style maps from classified GeoTIFFs with **state boundary** overlays.
+- **Inputs:** Smoothed/raw rotation rasters; `data/external/states/*.shp` if present, else **Natural Earth 110m** admin-1 (**13-state** Corn Belt) via `src.viz.rotation_maps.load_cornbelt_state_boundaries_5070`.
 - **Outputs:** `artifacts/figures/task2/task2__rotation_map__*__*.png`
-- **Key findings:** Maps include **text annotations**; verify **bbox** before agronomic labels (current stack may lie west of Iowa).
+- **Key findings:** Maps include **Corn Belt–wide** callout text; verify **bbox** so labels match the raster footprint.
 - **Next steps:** Side-by-side raw vs smoothed in report; adjust annotations if extent changes.
 
 #### notebooks/task2_crop_rotation/05_areal_statistics_export.ipynb
-- **Purpose:** Areal CSV + **metadata JSON** (grid ha, CRS, 30 m disclaimer) + **per-region** class shares + run bundle JSON.
-- **Inputs:** Smoothed rotation GeoTIFF; `rotation_metrics_classified.parquet`; spatial metadata
-- **Outputs:** `task2__areal_stats_by_class__*.csv`, `*__metadata.json`, `task2__areal_stats_by_region__*.csv`, `artifacts/logs/runs/*/run_bundle.json`
-- **Key findings:** Total classified footprint **~3.08 × 10⁶ ha** on ~10.2 ha/cell grid; regional split is **degenerate** if the stack lies entirely west of the lon proxy — see `TASK2_RESULTS.md` §0 / §2.6.
-- **Next steps:** Extend bbox or use state polygons that intersect the grid for Iowa vs Nebraska narrative.
+- **Purpose:** Areal CSV + **metadata JSON** (grid ha, CRS, 30 m disclaimer) + **per-state (13 Corn Belt)** class shares + run bundle JSON.
+- **Inputs:** Smoothed rotation GeoTIFF; `rotation_metrics_classified.parquet`; spatial metadata; `load_cornbelt_state_boundaries_5070` (same as NB04)
+- **Outputs:** `artifacts/tables/task4/task2__areal_stats_by_class__*.csv`, `*__metadata.json`, `task2__areal_stats_by_region__*.csv`, `artifacts/figures/task2/task2__per_state_rotation_classes.png`, `artifacts/logs/runs/*/run_bundle.json`
+- **Key findings:** By-region rows are **state names** from spatial join (plus `outside_configured_states` / `full_raster_extent` fallback if boundaries unavailable) — not an Iowa–Nebraska longitude proxy.
+- **Next steps:** Re-run after stack changes; interpret empty rare states as extent, not pipeline failure.
 
 ---
 

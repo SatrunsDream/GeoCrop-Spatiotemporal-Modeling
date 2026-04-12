@@ -6,7 +6,7 @@ Source: resources/CropSmart_NAFSI_Track1_Challenge_Brief.docx.pdf, Section 3
 
 These are the official inclusive calendar-year windows for CDL, NDVI, and SMAP
 on CropSmart. Task-specific analysis windows (e.g. 10-year rotation, train
-2013–2022 / validate 2023) are configured separately in configs/.
+Task 2 rotation window 2015–2024; train/validate splits for other tasks) are configured separately in configs/.
 """
 
 # Product availability (challenge brief §3 — inclusive calendar years).

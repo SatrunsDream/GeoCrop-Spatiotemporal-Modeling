@@ -4,8 +4,10 @@ Export geospatial data to Parquet under data/processed/.
 Supports two sources:
   --source interim   Read pre-built NetCDF from data/interim/ (original flow).
   --source wms       Download directly from CropSmart / CropScape WMS endpoints.
-                     Uses study_area.states from configs/task1_ndvi_analysis.yaml
-                     to compute the bounding box. No local NetCDF required.
+                     Uses ``study_area.states`` from ``configs/task1_ndvi_analysis.yaml``
+                     to union a WMS bbox in EPSG:5070 (same 13-state Corn Belt list as
+                     ``study_extent.yaml`` / ``task2_crop_rotation.yaml`` — keep them aligned).
+                     No local NetCDF required.
 
 Output layout (identical for both sources):
   CDL:  data/processed/cdl/cdl_stack_wide.parquet   (iy, ix, cdl_2008, …)

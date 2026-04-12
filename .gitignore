@@ -41,6 +41,8 @@ artifacts/logs/runs/*/
 
 # ── OS / editor noise ─────────────────────────────────────────────────────
 .DS_Store
+._*
+**/._*
 Thumbs.db
 *.swp
 .idea/

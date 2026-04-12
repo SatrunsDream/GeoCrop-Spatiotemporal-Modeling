@@ -6,7 +6,11 @@ Milestone and version log for the GeoCrop NAFSI Track 1 submission.
 
 ## [Unreleased]
 
+### Added
+- `context/TASK2_NAFSI_DATA_CONTRACT.md` — processed CDL/NDVI naming, Task 2 artifact layout, NAFSI rigor checklist (mirrors `model.ipynb` patterns).
+
 ### Changed
+- Task 2 CDL analysis window set to **2015–2024** (10 years) in `configs/task2_crop_rotation.yaml`; Task 2 notebooks, `rotation_maps` default title, and context docs updated.
 - Task 2 notebooks: valid **nbformat** (`execution_count`, cell `id`) for `jupyter nbconvert --execute`; Markov plot uses **matplotlib** only (no **seaborn** import in NB02).
 - `context/TASK2_RESULTS.md` rewritten from **current** parquet / CSV / sensitivity outputs (rotation-eligible denominator, geography caveat, strength assessment).
 - NB02: Markov **volume-by-origin** printout, **asymmetry** four-bar figure (`task2__transition_asymmetry.png`), **run-length** discrete bars (`task2__runlength_distribution.png`). NB03 markdown: **monoculture % invariant** across sensitivity grid. `TASK2_RESULTS.md` §**2.7** documents Findings A–F.

@@ -21,12 +21,12 @@ Current state of the project. Updated after each meaningful work session.
 - [x] `requirements.txt`
 - [x] `.gitignore`
 - [x] `configs/` — YAML configs for all four tasks
-- [x] `context/` — PROJECT_BRIEF, GLOSSARY, DATASETS, INTERFACES, STATUS, RISKS, **TASK2_RESULTS**
+- [x] `context/` — PROJECT_BRIEF, GLOSSARY, DATASETS, INTERFACES, STATUS, RISKS, **TASK2_RESULTS**, **TASK2_NAFSI_DATA_CONTRACT**
 - [x] `notebooks/` — task subfolders (Task 2 notebooks wired to **processed** CDL)
 - [x] `src/` — io, preprocessing, modeling (**rotation_classifier**), evaluation, viz (**rotation_maps**), utils
 - [x] `scripts/` — CLI entry-points per task plus `download_data.py`, `build_interim_data.py`, `process_interim_to_parquet.py`, `build_task2_notebooks.py`
 - [x] `tests/` — rotation metric unit tests (`tests/test_rotation_metrics.py`)
-- [x] `artifacts/` — Task 2 figures + CSV under `artifacts/figures/task2/`, `artifacts/tables/task2/`
+- [x] `artifacts/` — Task 2 figures under `artifacts/figures/task2/`; NB05 areal CSV/JSON under `artifacts/tables/task4/`; Markov/sensitivity under `artifacts/tables/task2/`
 - [x] **Task 2:** metrics Parquet, classified Parquet, raw + smoothed rotation GeoTIFFs under `data/processed/task2/`
 
 ## In Progress
@@ -40,7 +40,8 @@ Current state of the project. Updated after each meaningful work session.
 - [ ] Task 3: SMAP baseline climatology and anomaly maps
 - [ ] Task 3: Agricultural impact interpretation
 - [ ] Task 4: Feature engineering and model training
-- [ ] Task 4: Spatial prediction map and feature importance ablation
+- [ ] Task 4: Spatial prediction map and feature importance ablation  
+  *(NAFSI-style crop-type metrics: OA, per-class F1, confusion matrix, NDVI/SMAP ablations — see `context/PROJECT_BRIEF.md` “NAFSI-style research expectations vs tasks”.)*
 - [ ] PDF report (human-written)
 - [ ] Final repository freeze (deadline: April 13, 2026 — 4:00 PM CT)
 
