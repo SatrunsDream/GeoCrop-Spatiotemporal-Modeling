@@ -269,17 +269,17 @@ Three notebooks (replaces former 01–05 stubs): **data prep → climatology + a
 - **Next steps:** Run notebook 02.
 
 #### notebooks/task3_soil_moisture/02_climatology_and_anomalies.ipynb
-- **Purpose:** **ISO week-of-year** μ and σ from **2015–2021**; **2019** event-window z-scores vs that climatology.
+- **Purpose:** **ISO week-of-year** μ and σ from **2015–2021**; **multi-event** z-scores vs that climatology (default: **2019** wet-season window, **2022** Jun–Aug Plains window in `event_windows`).
 - **Inputs:** `task3_pixel_panel.parquet`, SMAP wide Parquets + metadata JSONs, `configs/task3_soil_moisture.yaml`
-- **Outputs:** `data/processed/task3/smap_climatology.parquet`, `data/processed/task3/smap_anomaly_2019.parquet`
-- **Key findings:** One row per pixel-week in the event window with `z_score`, `sm_mean`, `sm_std`, `cdl_2019`.
+- **Outputs:** `data/processed/task3/smap_climatology.parquet` (union of weeks needed by all events), `data/processed/task3/smap_anomaly_{event_id}.parquet` per configured event (includes `event_id`, `event_label`).
+- **Key findings:** One row per pixel-week in each event window with `z_score`, `sm_mean`, `sm_std`, `cdl_2019`.
 - **Next steps:** Run notebook 03 (figures + CSV).
 
 #### notebooks/task3_soil_moisture/03_maps_timeseries_tables.ipynb
-- **Purpose:** **4-panel** anomaly maps (ISO weeks 14, 18, 22, 27), **cropland mean z** time series with ±1σ band, **flood-duration** map (fraction of weeks with z > 1.5), **state × crop** summary CSV, `run_bundle.json`.
-- **Inputs:** `smap_anomaly_2019.parquet`, `cdl_stack_spatial_metadata.json`, Natural Earth / external state boundaries (via `load_cornbelt_state_boundaries_5070`)
-- **Outputs:** `artifacts/figures/task3/task3__anomaly_map_4panel__*.png`, `task3__anomaly_timeseries_cropland__*.png`, `task3__flood_duration_fraction__*.png`, `artifacts/tables/task3/task3__anomaly_stats_by_state_crop__*.csv`, `artifacts/logs/runs/*/run_bundle.json`
-- **Key findings:** Ties wet signal to **2019** planting-season window; table uses CDL **corn / soybean / winter wheat / oats** codes on the same pixels.
+- **Purpose:** For each `event_id`: **4-panel** anomaly maps at spread ISO weeks, **cropland mean z** time series with ±1σ band, **duration** map (wet: fraction of weeks with z > threshold; dry: fraction with z < threshold), **state × crop** summary CSV, and `run_bundle.json` with `outputs_by_event`.
+- **Inputs:** `smap_anomaly_{event_id}.parquet`, `cdl_stack_spatial_metadata.json`, Natural Earth / external state boundaries (via `load_cornbelt_state_boundaries_5070`)
+- **Outputs:** `artifacts/figures/task3/task3__{event_id}__anomaly_map_4panel__*.png`, `task3__{event_id}__anomaly_timeseries_cropland__*.png`, `task3__{event_id}__duration_fraction__*.png`, `artifacts/tables/task3/task3__{event_id}__anomaly_stats_by_state_crop__*.csv`, `artifacts/logs/runs/*/run_bundle.json`
+- **Key findings:** Contrasts **2019** excess-moisture signal with **2022** dry-soil / negative-z patterns on the same rotation/CDL pixel frame; tables still use CDL **corn / soybean / winter wheat / oats** codes (`cdl_2019`).
 - **Next steps:** Add prose interpretation (phenology calendar, NASS citations) in the report PDF.
 
 ---

@@ -1,6 +1,6 @@
 # Task 2 — Data contract & NAFSI-aligned rigor
 
-**Purpose:** After reprocessing `data/processed/cdl/` and `data/processed/ndvi/`, Task 2 notebooks must read **stable paths** and write **versioned artifacts** under `artifacts/`, consistent with the Track 1 brief (`resources/CropSmart_NAFSI_Track1_Challenge_Brief.docx.pdf`) and the same patterns used in `notebooks/task1_ndvi_timeseries/model.ipynb` (config-driven paths, JSON sidecars, explicit outputs).
+**Purpose:** After reprocessing `data/processed/cdl/` and `data/processed/ndvi/`, Task 2 notebooks must read **stable paths** and write **versioned artifacts** under `artifacts/`, consistent with the Track 1 brief (`resources/CropSmart_NAFSI_Track1_Challenge_Brief.docx.pdf`) and the same patterns used in `notebooks/task1_ndvi_timeseries/03_ndvi_phenology_hsgp_bayesian.ipynb` (config-driven paths, JSON sidecars, explicit outputs).
 
 ---
 
@@ -40,7 +40,7 @@ From `configs/task2_crop_rotation.yaml`:
 
 ---
 
-## 4. Scientific process checklist (brief + `model.ipynb` patterns)
+## 4. Scientific process checklist (brief + Task 1 HSGP notebook patterns)
 
 Use the **PDF** as the rubric source; automate everything below in notebooks or scripts.
 
@@ -51,7 +51,7 @@ Use the **PDF** as the rubric source; automate everything below in notebooks or 
 5. **Uncertainty / limitations** — Document CDL noise, coarse grid (~320 m), and strict vs relaxed interpretation (`context/TASK2_RESULTS.md`, `context/RISKS.md`).
 6. **Deliverables** — Figures and tables under `artifacts/` for graders; processed rasters under `data/processed/task2/` for downstream maps.
 
-**Task 1 reference:** `model.ipynb` loads YAML, reads `data/processed/ndvi/..._metadata.json` for DOY alignment, writes figures to `cfg["output"]["figures_dir"]` and tables to `cfg["output"]["tables_dir"]`. Task 2 mirrors that layout with `task2_crop_rotation.yaml`.
+**Task 1 reference:** `03_ndvi_phenology_hsgp_bayesian.ipynb` loads YAML, reads `data/processed/ndvi/..._metadata.json` for DOY alignment, writes figures to `cfg["output"]["figures_dir"]` and tables to `cfg["output"]["tables_dir"]`. Task 2 mirrors that layout with `task2_crop_rotation.yaml`.
 
 ---
 

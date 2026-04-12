@@ -54,7 +54,7 @@ def wcol_for_iso_week(meta: dict[str, Any], iso_week: int) -> str | None:
     return None
 
 
-def event_week_columns_2019(meta: dict[str, Any], start: str, end: str) -> list[tuple[str, str, int]]:
+def event_week_columns(meta: dict[str, Any], start: str, end: str) -> list[tuple[str, str, int]]:
     """
     List (wcol, date_str, iso_week) for columns whose start date falls in [start, end] inclusive.
 
@@ -72,3 +72,7 @@ def event_week_columns_2019(meta: dict[str, Any], start: str, end: str) -> list[
             continue
         out.append((wcol, str(date_str)[:10], int(ts.isocalendar().week)))
     return out
+
+
+# Backward-compatible name used in early Task 3 drafts
+event_week_columns_2019 = event_week_columns

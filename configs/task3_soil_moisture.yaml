@@ -17,11 +17,25 @@ baseline:
   period: [2015, 2021]                # years used to compute climatology (μ and σ)
   anomaly_type: z_score               # z_score | percentile_rank | both
 
-event_window:
-  label: 2019_midwest_flood           # human-readable tag
-  start_date: "2019-04-01"
-  end_date: "2019-07-31"
-  description: "2019 Midwest / Missouri–Mississippi flooding — excess moisture event"
+# Multi-event analysis (each gets its own anomaly Parquet + figures in NB03).
+# Baseline remains 2015–2021; z-scores use the same climatology for every event year.
+# References: 2019 spring–summer Midwest / MRV flooding (wet soils); 2022 Central–Southern
+# Plains flash drought (Drought.gov regional updates, June–August heat + low precip).
+event_windows:
+  - id: midwest_flood_2019
+    label: "2019 Midwest / Mississippi spring flood (excess soil moisture)"
+    year: 2019
+    start_date: "2019-04-01"
+    end_date: "2019-07-31"
+    duration_mode: wet_above          # map: fraction of weeks with z > duration_z
+    duration_z: 1.5
+  - id: plains_drought_2022
+    label: "2022 Great Plains flash drought (heat + dry soils)"
+    year: 2022
+    start_date: "2022-06-01"
+    end_date: "2022-08-31"
+    duration_mode: dry_below          # map: fraction of weeks with z < duration_z
+    duration_z: -1.5
 
 cdl_mask:
   year: 2019

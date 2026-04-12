@@ -1,4 +1,4 @@
-"""SMAP weekly baseline climatology and 2019 z-score anomalies (Task 3, Parquet path)."""
+"""SMAP weekly baseline climatology and event-window z-score anomalies (Task 3, Parquet path)."""
 
 from __future__ import annotations
 
@@ -13,6 +13,27 @@ from src.io.smap_weekly_parquet import (
     smap_wide_parquet_path,
     wcol_for_iso_week,
 )
+
+
+def event_windows_from_cfg(cfg: dict) -> list[dict]:
+    """
+    Return ``event_windows`` list from YAML, or migrate legacy single ``event_window`` block.
+    """
+    wins = cfg.get("event_windows")
+    if isinstance(wins, list) and wins:
+        return [dict(w) for w in wins]
+    ev = cfg.get("event_window") or {}
+    return [
+        {
+            "id": "midwest_flood_2019",
+            "label": str(ev.get("label", "2019 Midwest / Mississippi spring flood")),
+            "year": 2019,
+            "start_date": str(ev["start_date"]),
+            "end_date": str(ev["end_date"]),
+            "duration_mode": "wet_above",
+            "duration_z": 1.5,
+        }
+    ]
 
 
 def load_rotation_eligible_pixels(repo_root: Path) -> pd.DataFrame:
@@ -97,7 +118,7 @@ def compute_event_anomalies(
     sigma_floor: float = 1e-4,
 ) -> pd.DataFrame:
     """
-    ``event_specs`` is ``(wcol, date_str, iso_week)`` from ``event_week_columns_2019``.
+    ``event_specs`` is ``(wcol, date_str, iso_week)`` from ``src.io.smap_weekly_parquet.event_week_columns``.
 
     ``pixels`` must include ``iy``, ``ix`` (and optionally ``cdl_2019`` for downstream tables).
     """

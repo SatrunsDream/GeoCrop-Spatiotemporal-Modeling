@@ -112,7 +112,7 @@ After the repo moved from an **Iowa + Nebraska–only** footprint to the **full 
 
 **Wide Parquet convention:** rows indexed by `iy`, `ix`; time-varying bands as columns `w000`, `w001`, … in chronological order; CDL adds `cdl_{year}` columns. Each `*_metadata.json` records CRS, transform, dimensions, and (for NDVI/SMAP) `time_start_day` per week column.
 
-**Task 2 naming & NAFSI checklist:** `context/TASK2_NAFSI_DATA_CONTRACT.md` (processed paths, `artifacts/` layout for figures and tables, alignment with the challenge brief and the Task 1 `model.ipynb` pattern).
+**Task 2 naming & NAFSI checklist:** `context/TASK2_NAFSI_DATA_CONTRACT.md` (processed paths, `artifacts/` layout for figures and tables, alignment with the challenge brief and the Task 1 `03_ndvi_phenology_hsgp_bayesian.ipynb` pattern).
 
 ---
 

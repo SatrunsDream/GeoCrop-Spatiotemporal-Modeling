@@ -7,9 +7,10 @@ Milestone and version log for the GeoCrop NAFSI Track 1 submission.
 ## [Unreleased]
 
 ### Added
-- `context/TASK2_NAFSI_DATA_CONTRACT.md` — processed CDL/NDVI naming, Task 2 artifact layout, NAFSI rigor checklist (mirrors `model.ipynb` patterns).
+- `context/TASK2_NAFSI_DATA_CONTRACT.md` — processed CDL/NDVI naming, Task 2 artifact layout, NAFSI rigor checklist (mirrors Task 1 `03_ndvi_phenology_hsgp_bayesian.ipynb` patterns).
 
 ### Changed
+- Task 1: renamed `notebooks/task1_ndvi_timeseries/model.ipynb` to `03_ndvi_phenology_hsgp_bayesian.ipynb` (HSGP / NumPyro Bayesian phenology); cross-references updated in `context/` and Task 2 notebook 01.
 - Task 2 CDL analysis window set to **2015–2024** (10 years) in `configs/task2_crop_rotation.yaml`; Task 2 notebooks, `rotation_maps` default title, and context docs updated.
 - Task 2 notebooks: valid **nbformat** (`execution_count`, cell `id`) for `jupyter nbconvert --execute`; Markov plot uses **matplotlib** only (no **seaborn** import in NB02).
 - `context/TASK2_RESULTS.md` rewritten from **current** parquet / CSV / sensitivity outputs (rotation-eligible denominator, geography caveat, strength assessment).
