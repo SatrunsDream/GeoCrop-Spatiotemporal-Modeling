@@ -1,39 +1,51 @@
-# Task 4 — Crop Mapping Prediction Model
-# CDL history + NDVI + SMAP → crop type classification (corn / soybean / winter wheat)
+# Task 4 — Rolling panel + LightGBM (NAFSI Track 1)
+# Temporal split: train year<=2021, val=2022, test=2023 (panel rows include2013–2022 for train/val)
 
 study_area:
   states: [Iowa, Illinois, Indiana, Nebraska, Minnesota]
   bbox: null
 
+# Model labels (integer): 0=other_cropland, 1=corn, 2=soy, 3=winter_wheat
 target_classes:
   corn: 1
   soybean: 5
-  winter_wheat: 26                    # third required class
-  # other / non-crop: aggregated from remaining CDL codes
+  winter_wheat: 24
+  cropland_max_code: 61
 
 cdl:
-  history_years: [2013, 2022]         # training label and history feature source
-  test_year: 2023                     # held-out temporal validation year
-  data_path: data/raw/cdl/
+  data_path: data/processed/cdl/cdl_stack_wide.parquet
+  metadata_path: data/processed/cdl/cdl_stack_spatial_metadata.json
+  mask_years: [2013, 2022]
+  min_cropland_years_in_mask: 3
+  history_lookback_years: 10
+  lag_codes: 5
 
-features:
-  cdl_history:
-    enabled: true
-    n_years_lookback: 5               # how many prior years of crop sequence to encode
-    include_transition_freq: true     # fraction of corn↔soy transitions
-    include_neighborhood_composition: true  # 3×3 neighbor crop share
-    include_rotation_score: true      # rotation regularity score from Task 2
-  ndvi:
-    enabled: true
-    statistics: [mean_ndvi, peak_ndvi, greenup_doy, peak_doy, integral]
-    source: data/processed/task1/     # phenometrics produced in Task 1
-  smap:
-    enabled: true
-    statistics: [mean_sm, anomaly_zscore_growing_season]
-    source: data/processed/task3/
+panel:
+  train_years: [2013, 2022]
+  train_split_max_year: 2021
+  val_year: 2022
+  test_year: 2023
+
+ndvi:
+  source_dir: data/processed/ndvi/
+  scale_to_physical: 250.0
+  week_cols_pattern: "w"  # w000..w022 (May–Oct subset in parquet)
+
+smap:
+  source_dir: data/processed/smap/
+  parent_stride: 28
+  growing_season_weeks: [17, 39]
+  spring_weeks: [13, 18]
+  smap_start_year: 2015
+
+external:
+  soil_parquet: data/processed/task4/soil_features.parquet
+  terrain_parquet: data/processed/task4/terrain_features.parquet
+  daymet_glob: "data/processed/task4/daymet_features_{year}.parquet"
+  csb_parquet: data/processed/task4/csb_features.parquet
 
 model:
-  family: lightgbm                    # lightgbm | xgboost | catboost | random_forest
+  family: lightgbm
   hyperparameters:
     n_estimators: 500
     learning_rate: 0.05
@@ -41,21 +53,29 @@ model:
     num_leaves: 63
     subsample: 0.8
     colsample_bytree: 0.8
+    random_state: 42
+    is_unbalance: true
+  early_stopping_rounds: 50
 
 validation:
-  strategy: temporal_holdout          # temporal_holdout | spatial_block_cv | both
-  spatial_block_size_km: 50          # block size for spatial CV (if used)
-  metrics: [overall_accuracy, per_class_f1, confusion_matrix]
-  stratify_by_rotation_regime: true   # report metrics separately for regular vs. irregular rotation
+  strategy: temporal_holdout
+  metrics: [overall_accuracy, macro_f1, per_class_f1, confusion_matrix]
+  stratify_by_rotation_regime: true
 
 feature_importance:
   enabled: true
-  method: shap                        # shap | permutation | native_gain
-  ablations:
-    - cdl_only
-    - cdl_plus_ndvi
-    - cdl_plus_smap
-    - cdl_plus_ndvi_plus_smap         # full model
+  method: shap
+  shap_sample_size: 1000
+
+ablations:
+  - { id: A, name: cdl_only, features: [cdl] }
+  - { id: B, name: cdl_ndvi, features: [cdl, ndvi] }
+  - { id: C, name: cdl_smap, features: [cdl, smap] }
+  - { id: D, name: cdl_ndvi_smap, features: [cdl, ndvi, smap] }
+  - { id: E, name: D_plus_soil, features: [cdl, ndvi, smap, soil] }
+  - { id: F, name: E_plus_terrain, features: [cdl, ndvi, smap, soil, terrain] }
+  - { id: G, name: F_plus_daymet, features: [cdl, ndvi, smap, soil, terrain, daymet] }
+  - { id: H, name: all_features, features: [cdl, ndvi, smap, soil, terrain, daymet, csb] }
 
 output:
   figures_dir: artifacts/figures/task4/

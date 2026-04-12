@@ -18,6 +18,9 @@ venv/
 env/
 ENV/
 
+# ── Local AI / editor tooling (do not commit) ─────────────────────────────
+.claude/
+
 # ── Jupyter ───────────────────────────────────────────────────────────────
 .ipynb_checkpoints/
 *.ipynb_checkpoints

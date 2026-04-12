@@ -37,9 +37,16 @@ cartopy>=0.22
 lightgbm>=4.3
 xgboost>=2.0
 catboost>=1.2
+shap>=0.45
+
+# ── Task 4 external features (optional; large downloads) ───────────────────
+pydaymet>=0.16
+py3dep>=0.16
 
 # ── Remote sensing helpers (optional) ─────────────────────────────────────
-pymodis>=2.1
+# pymodis is not imported by this repo’s core code. It depends on the GDAL
+# Python bindings, which need native GDAL + gdal-config (e.g. brew install gdal).
+# To use it in notebooks: install GDAL first, then: pip install "pymodis>=2.1"
 
 # ── HTTP / downloads (scripts/download_data.py) ───────────────────────────
 requests>=2.31

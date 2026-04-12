@@ -48,6 +48,11 @@ Produced by `scripts/process_interim_to_parquet.py`.
 - **Returns:** `xarray.DataArray` — shape (T, H, W), dtype float32
 - **Dims:** (time, y, x) on EASE-Grid 2.0 (~9 km)
 
+### processed_loaders (wide Parquet → xarray)
+- **`load_cdl_stack_from_processed(repo_root)`** — `data/processed/cdl/cdl_stack_wide.parquet` → `DataArray` `(year, y, x)`.
+- **`load_cdl_stack_wide_dataframe(repo_root)`** — same CDL data as `pandas.DataFrame` (`iy`, `ix`, `cdl_<year>`).
+- **`load_ndvi_weekly_all_years_processed` / `load_smap_weekly_all_years_processed`** — all `*_weekly_{year}_wide.parquet` files → `DataArray` `(calendar_year, time, y, x)`; shorter years are NaN-padded in `time` to a common length.
+
 ---
 
 ## src/preprocessing — Transform Outputs

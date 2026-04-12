@@ -1,0 +1,25 @@
+# Study extent for WMS downloads (CDL / NDVI / SMAP) and downstream grids.
+# Bounding box in EPSG:5070 is computed at runtime as the union of these states
+# (Natural Earth admin-1) plus buffer_meters — not from the CONUS-wide limits in
+# data/external/*.map (those caps only supply MaxWidth/MaxHeight and service URLs).
+
+corn_belt_iso_3166_2:
+  # USDA Heartland / Corn Belt — full state footprints (union), EPSG:5070 + buffer
+  - US-IA
+  - US-IL
+  - US-IN
+  - US-OH
+  - US-MO
+  - US-MN
+  - US-NE
+  - US-SD
+  - US-WI
+  - US-KS
+  - US-ND
+  - US-KY
+  - US-MI
+
+buffer_meters: 20000
+# Target ground resolution for WMS WIDTH/HEIGHT (meters per pixel). Pixels are
+# chosen to cover the full bbox within MaxWidth×MaxHeight from the NDVI .map caps.
+target_res_meters: 320

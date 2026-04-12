@@ -50,6 +50,21 @@ INTERIM_CDL.mkdir(parents=True, exist_ok=True)
 INTERIM_NDVI.mkdir(parents=True, exist_ok=True)
 INTERIM_SMAP.mkdir(parents=True, exist_ok=True)
 
+CDL_RAW_SUFFIX = "cornbelt_5070"
+CDL_RAW_LEGACY_SUFFIX = "iowa_nebraska_5070"
+
+
+def cdl_raw_tif_path(year: int) -> Path | None:
+    """Prefer Corn Belt downloads; fall back to legacy Iowa+Nebraska filenames."""
+    p_new = RAW_CDL / f"cdl_{year}_{CDL_RAW_SUFFIX}.tif"
+    p_old = RAW_CDL / f"cdl_{year}_{CDL_RAW_LEGACY_SUFFIX}.tif"
+    if p_new.is_file():
+        return p_new
+    if p_old.is_file():
+        return p_old
+    return None
+
+
 # ── Layer name parsers ───────────────────────────────────────────────────────
 
 def parse_ndvi_layer_date(filename: str) -> datetime.date | None:
@@ -94,9 +109,12 @@ def build_cdl_stack(cdl_years: list[int]) -> None:
     years_found = []
 
     for year in sorted(cdl_years):
-        tif = RAW_CDL / f"cdl_{year}_iowa_nebraska_5070.tif"
-        if not tif.exists():
-            print(f"  [SKIP] {tif.name} not found — run download_data.py first")
+        tif = cdl_raw_tif_path(year)
+        if tif is None:
+            print(
+                f"  [SKIP] cdl_{year}_{CDL_RAW_SUFFIX}.tif (or legacy _{CDL_RAW_LEGACY_SUFFIX}) "
+                "not found — run download_data.py first"
+            )
             continue
         da = xr.open_dataarray(tif, engine="rasterio").squeeze("band", drop=True)
         da = da.expand_dims({"year": [year]})
@@ -110,7 +128,7 @@ def build_cdl_stack(cdl_years: list[int]) -> None:
         return
 
     stack = xr.concat(arrays, dim="year")
-    stack.attrs["description"] = "Annual CDL crop type, Iowa+Nebraska, EPSG:5070"
+    stack.attrs["description"] = "Annual CDL crop type, Corn Belt (EPSG:5070), WMS extent from study_extent.yaml"
     stack.attrs["source"]      = "USDA NASS CropScape WMS"
     # NetCDF3 (scipy default) cannot encode uint8 CDL class codes; use int16 + NetCDF4.
     stack = stack.astype("int16")
@@ -153,7 +171,9 @@ def build_ndvi_stack(ndvi_years: list[int]) -> None:
 
         stack = xr.concat(arrays, dim="time").sortby("time")
         stack.name = "ndvi"
-        stack.attrs["description"] = f"NDVI weekly growing season {year}, Iowa+Nebraska, EPSG:5070"
+        stack.attrs["description"] = (
+            f"NDVI weekly growing season {year}, Corn Belt (EPSG:5070), extent from study_extent.yaml"
+        )
         stack.attrs["source"]      = "CropSmart/NASSGEO WMS — MODIS 250m"
 
         out = INTERIM_NDVI / f"ndvi_weekly_{year}.nc"
@@ -194,7 +214,9 @@ def build_smap_stack(smap_years: list[int]) -> None:
 
         stack = xr.concat(arrays, dim="time").sortby("time")
         stack.name = "sm_surface"
-        stack.attrs["description"] = f"SMAP weekly surface soil moisture (9km) {year}, Iowa+Nebraska, EPSG:5070"
+        stack.attrs["description"] = (
+            f"SMAP weekly surface soil moisture (9km) {year}, Corn Belt (EPSG:5070), extent from study_extent.yaml"
+        )
         stack.attrs["source"]      = "CropSmart/NASSGEO WMS — SMAP L4"
         stack.attrs["units"]       = "m3/m3 (scaled from WMS — verify scale factor)"
 

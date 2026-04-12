@@ -10,7 +10,9 @@ Strategy: WMS GetMap → image/tiff (GeoTIFF).
   - One GeoTIFF per year for CDL.
   - One GeoTIFF per growing-season week for NDVI.
   - One GeoTIFF per week for SMAP (all 52 weeks, for baseline climatology).
-  - All files clipped to the Iowa + Nebraska study-area BBOX in EPSG:5070.
+  - Study extent: union of Corn Belt states in configs/study_extent.yaml (EPSG:5070 + buffer).
+  - WMS WIDTH/HEIGHT are sized to that bbox using caps from data/external/NDVI-WEEKLY_*.map,
+    clamped to 4096 px (mapserv + CropScape GetMap limit; may exceed advertised MaxWidth).
 
 NDVI/SMAP mapserv ``map=`` paths and the mapserv base URL are read from saved
 GetCapabilities XML under data/external/ (e.g. NDVI-WEEKLY_2025.map). Layer
@@ -52,22 +54,20 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from src.utils.nafsi_catalog import CDL_YEARS, NDVI_YEARS, SMAP_YEARS
+from src.utils.study_extent import (
+    STUDY_CRS,
+    WMS_GETMAP_MAX_PIXEL,
+    WmsStudyGrid,
+    resolve_cdl_wms_study_grid,
+    resolve_wms_study_grid,
+)
 
-# ── Study area bounding box (EPSG:5070 — CONUS Albers Equal Area) ──────────
-# Covers Iowa + Nebraska corn belt. Verified via PROJ transformation.
-# Iowa:     xmin=-505000, xmax=-207000, ymin=2063000, ymax=2392000
-# Nebraska: xmin=-823000, xmax=-358000, ymin=1947000, ymax=2234000
-# Combined + 20km buffer:
-STUDY_BBOX = (-843000, 1927000, -187000, 2412000)  # (xmin, ymin, xmax, ymax)
-STUDY_CRS  = "EPSG:5070"
-
-# Output image dimensions (pixels). Width/height ratio must match bbox aspect ratio.
-# BBOX is 656km wide × 485km tall → 656:485 ≈ 1.35:1
-# For CDL (30m pixel): 656000/30 ≈ 21867 px — too large. Download in tiles, or use lower res.
-# For a first pass use 2048×1520 px which gives ~320m/px (sufficient for inspection).
-# For production CDL download you need tiling or WCS — see note below.
-IMG_WIDTH  = 2048
-IMG_HEIGHT = 1520
+# Corn Belt BBOX + pixel grid: configs/study_extent.yaml and init_study_grids()
+# (uses Service MaxWidth/MaxHeight from data/external/NDVI-WEEKLY_*.map).
+CDL_RAW_SUFFIX = "cornbelt_5070"
+CDL_RAW_LEGACY_SUFFIX = "iowa_nebraska_5070"
+_ACTIVE_GRID: WmsStudyGrid | None = None  # NDVI / SMAP (mapserv caps)
+_CDL_GRID: WmsStudyGrid | None = None  # CropScape CDL (4096 max)
 
 # ── WMS endpoint URLs (defaults; overridden by data/external GetCapabilities) ─
 CDL_WMS_BASE  = "https://crop.csiss.gmu.edu/cgi-bin/wms_cdlall"
@@ -109,11 +109,63 @@ def filter_year_list(years: list[int], lo: int | None, hi: int | None) -> list[i
 
 def latest_year_cdl_raw() -> int | None:
     found: list[int] = []
-    for p in RAW_CDL.glob("cdl_*_iowa_nebraska_5070.tif"):
-        m = re.match(r"cdl_(\d{4})_iowa_nebraska_5070\.tif$", p.name)
+    pat = re.compile(rf"cdl_(\d{{4}})_({CDL_RAW_SUFFIX}|{CDL_RAW_LEGACY_SUFFIX})\.tif$")
+    for p in RAW_CDL.glob("cdl_*.tif"):
+        m = pat.match(p.name)
         if m:
             found.append(int(m.group(1)))
     return max(found) if found else None
+
+
+def _active_grid() -> WmsStudyGrid:
+    if _ACTIVE_GRID is None:
+        raise RuntimeError("Internal error: study grid not initialized")
+    return _ACTIVE_GRID
+
+
+def _cdl_grid() -> WmsStudyGrid:
+    if _CDL_GRID is None:
+        raise RuntimeError("Internal error: CDL study grid not initialized")
+    return _CDL_GRID
+
+
+def init_study_grids(
+    ndvi_capabilities: Path | None,
+    cdl_capabilities: Path | None,
+    width_override: int,
+    height_override: int,
+) -> tuple[WmsStudyGrid, WmsStudyGrid]:
+    """
+    Corn Belt bbox from configs/study_extent.yaml.
+
+    NDVI/SMAP and CDL both clamp to WMS_GETMAP_MAX_PIXEL (4096) for GetMap; caps may
+    advertise higher MaxWidth/MaxHeight in .map files.
+    """
+    global _ACTIVE_GRID, _CDL_GRID
+    ndvi_path = ndvi_capabilities if ndvi_capabilities and ndvi_capabilities.is_file() else None
+    cdl_path = cdl_capabilities if cdl_capabilities and cdl_capabilities.is_file() else None
+
+    grid = resolve_wms_study_grid(ndvi_path)
+    if width_override > 0 and height_override > 0:
+        wo = min(width_override, grid.max_width)
+        ho = min(height_override, grid.max_height)
+        if wo != width_override or ho != height_override:
+            print(
+                f"[warn] Clamping --width/--height from {width_override}×{height_override} "
+                f"to {wo}×{ho} (GetMap max {WMS_GETMAP_MAX_PIXEL})."
+            )
+        grid = WmsStudyGrid(
+            bbox=grid.bbox,
+            width=wo,
+            height=ho,
+            max_width=grid.max_width,
+            max_height=grid.max_height,
+        )
+    _ACTIVE_GRID = grid
+
+    cdl_g = resolve_cdl_wms_study_grid(cdl_path)
+    _CDL_GRID = cdl_g
+    return grid, cdl_g
 
 
 def latest_year_ndvi_raw() -> int | None:
@@ -434,15 +486,24 @@ def get_available_smap_layers(year: int, stat: str = "AVERAGE") -> list[str]:
 # Core download function
 # ═══════════════════════════════════════════════════════════════════════════
 
+def _wms_service_exception_text(content: bytes, limit: int = 500) -> str:
+    """Extract first ServiceException message from OGC XML error body, if present."""
+    text = content[:8000].decode("utf-8", errors="replace")
+    m = re.search(r"<ServiceException[^>]*>([^<]+)</ServiceException>", text, re.I | re.DOTALL)
+    if m:
+        return m.group(1).strip()[:limit]
+    return text[:limit]
+
+
 def download_geotiff(
     wms_base: str,
     layer: str,
     out_path: Path,
     extra_params: dict | None = None,
     crs: str = STUDY_CRS,
-    bbox: tuple = STUDY_BBOX,
-    width: int = IMG_WIDTH,
-    height: int = IMG_HEIGHT,
+    bbox: tuple | None = None,
+    width: int | None = None,
+    height: int | None = None,
 ) -> bool:
     """
     Download a single WMS layer as a GeoTIFF and save to out_path.
@@ -469,6 +530,12 @@ def download_geotiff(
     bool
         True if downloaded successfully, False if failed.
     """
+    if bbox is None or width is None or height is None:
+        g = _active_grid()
+        bbox = bbox if bbox is not None else g.bbox
+        width = width if width is not None else g.width
+        height = height if height is not None else g.height
+
     if out_path.exists():
         print(f"    [SKIP] Already exists: {out_path.name}")
         return True
@@ -497,7 +564,10 @@ def download_geotiff(
             content_type = resp.headers.get("Content-Type", "")
             if "tiff" not in content_type and "image" not in content_type:
                 print(f"    [WARN] Unexpected content-type '{content_type}' for {layer}")
-                print(f"           Response snippet: {resp.content[:200]}")
+                if "xml" in content_type or resp.content.lstrip().startswith(b"<?xml"):
+                    print(f"           WMS error: {_wms_service_exception_text(resp.content)}")
+                else:
+                    print(f"           Response snippet: {resp.content[:200]!r}")
                 return False
 
             out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -519,24 +589,23 @@ def download_geotiff(
 
 def download_cdl(years: list[int]) -> None:
     """
-    Download CDL GeoTIFFs for each year.
-
-    NOTE: CDL is 30m resolution. A single WMS tile at 2048×1520 px covers
-    the study area at ~320m/px — useful for inspection and rotation analysis.
-    For full 30m resolution you would need WCS (Web Coverage Service) or
-    tiled downloads. For this challenge 320m is a valid starting point for
-    rotation analysis; adjust WIDTH/HEIGHT for finer detail.
-
-    For true 30m over Iowa+Nebraska (656km×485km) you'd need:
-    Width = 656000/30 ≈ 21867 px, Height = 485000/30 ≈ 16167 px
-    which is within the CropScape WMS max (check server limits first).
+    Corn Belt extent (study_extent.yaml). Native CDL is 30 m; WMS image size
+    uses the CDL grid (4096 px cap) from init_study_grids(), not NDVI caps.
     """
     print("\n══ Downloading CDL ══")
+    g = _cdl_grid()
     for year in years:
         layer    = cdl_layer_name(year)
-        out_path = RAW_CDL / f"cdl_{year}_iowa_nebraska_5070.tif"
+        out_path = RAW_CDL / f"cdl_{year}_{CDL_RAW_SUFFIX}.tif"
         print(f"  Year {year} → {layer}")
-        download_geotiff(CDL_WMS_BASE, layer, out_path)
+        download_geotiff(
+            CDL_WMS_BASE,
+            layer,
+            out_path,
+            bbox=g.bbox,
+            width=g.width,
+            height=g.height,
+        )
         time.sleep(INTER_REQUEST_DELAY_S)
 
 
@@ -632,27 +701,46 @@ def print_download_plan(
     ndvi_range = f"{ny[0]}-{ny[-1]}" if ny else "(none)"
     smap_range = f"{sy[0]}-{sy[-1]}" if sy else "(none)"
 
+    g_n = _active_grid()
+    g_c = _cdl_grid()
+    baseline_px = 2048 * 1520
+    px_scale_ndvi = (g_n.width * g_n.height) / baseline_px
+    px_scale_cdl = (g_c.width * g_c.height) / baseline_px
+
+    print(
+        f"\nWMS grid NDVI/SMAP: {g_n.width}×{g_n.height} px "
+        f"(cap {g_n.max_width}×{g_n.max_height}), BBOX {g_n.bbox}"
+    )
+    print(
+        f"WMS grid CDL: {g_c.width}×{g_c.height} px "
+        f"(cap {g_c.max_width}×{g_c.max_height}), same BBOX"
+    )
+
     print(f"\nCDL  ({len(cy)} years × 1 file/year; {cdl_range}):")
     print(f"  Files: {cdl_files}")
-    print(f"  Approx size: {cdl_files * 3:.0f} MB  (est. ~3 MB/file at 2048px)")
+    print(f"  Approx size: {cdl_files * 3 * px_scale_cdl:.0f} MB  (scaled from ~3 MB/file @ 2048×1520)")
     print(f"  Destination: {RAW_CDL.relative_to(REPO_ROOT)}/")
 
     print(f"\nNDVI ({len(ny)} years × ~{len(GROWING_SEASON_WEEKS)} weeks/year — growing season only; {ndvi_range}):")
     print(f"  Files: {ndvi_files}")
-    print(f"  Approx size: {ndvi_files * 2:.0f} MB  (est. ~2 MB/file at 2048px)")
+    print(f"  Approx size: {ndvi_files * 2 * px_scale_ndvi:.0f} MB  (scaled from ~2 MB/file @ 2048×1520)")
     print(f"  Destination: {RAW_NDVI.relative_to(REPO_ROOT)}/")
 
     print(f"\nSMAP ({len(sy)} years × 52 weeks/year — all weeks for baseline; {smap_range}):")
     print(f"  Files: {smap_files}")
-    print(f"  Approx size: {smap_files * 0.5:.0f} MB  (est. ~0.5 MB/file — 9km coarser)")
+    print(f"  Approx size: {smap_files * 0.5 * px_scale_ndvi:.0f} MB  (scaled from ~0.5 MB/file @ 2048×1520)")
     print(f"  Destination: {RAW_SMAP.relative_to(REPO_ROOT)}/")
 
     total_files = cdl_files + ndvi_files + smap_files
-    total_mb    = cdl_files * 3 + ndvi_files * 2 + smap_files * 0.5
+    total_mb = (
+        cdl_files * 3 * px_scale_cdl
+        + ndvi_files * 2 * px_scale_ndvi
+        + smap_files * 0.5 * px_scale_ndvi
+    )
     print(f"\nTotal: {total_files} files, est. {total_mb/1024:.1f} GB")
     print(f"Est. download time at 10 MB/s + 1s delay: "
           f"{(total_files * 1 + total_mb/10)/60:.0f} minutes")
-    print("\nRun with --dry-run=False to start downloading.")
+    print('\nRun e.g. `python scripts/download_data.py --dataset all` to download.')
 
 
 def layer_name_examples() -> None:
@@ -738,8 +826,18 @@ def main() -> None:
         ),
     )
     parser.add_argument("--stat",  default="AVERAGE",      help="SMAP statistic: AVERAGE or MAX.")
-    parser.add_argument("--width", type=int, default=IMG_WIDTH,   help="Output image width in pixels.")
-    parser.add_argument("--height",type=int, default=IMG_HEIGHT,  help="Output image height in pixels.")
+    parser.add_argument(
+        "--width",
+        type=int,
+        default=0,
+        help="Output image width in pixels (0 = auto from Corn Belt bbox + WMS caps).",
+    )
+    parser.add_argument(
+        "--height",
+        type=int,
+        default=0,
+        help="Output image height in pixels (0 = auto). Both --width and --height must be set to override.",
+    )
     args = parser.parse_args()
 
     if not args.no_external_config:
@@ -748,6 +846,21 @@ def main() -> None:
             smap_caps=args.smap_capabilities,
             cdl_caps=args.cdl_capabilities,
         )
+
+    ndvi_caps_path = args.ndvi_capabilities or _pick_latest_external("NDVI-WEEKLY_*.map")
+    cdl_caps_path = args.cdl_capabilities
+    if cdl_caps_path is None:
+        cdl_cands = sorted(EXTERNAL_DIR.glob("wms_cdlall*GetCapabilities*"))
+        cdl_caps_path = cdl_cands[0] if cdl_cands else None
+
+    g_ndvi, g_cdl = init_study_grids(
+        ndvi_caps_path, cdl_caps_path, args.width, args.height
+    )
+    print(
+        f"[grid] Corn Belt EPSG:5070 BBOX {g_ndvi.bbox} | "
+        f"NDVI/SMAP {g_ndvi.width}×{g_ndvi.height} (cap {g_ndvi.max_width}×{g_ndvi.max_height}) | "
+        f"CDL {g_cdl.width}×{g_cdl.height} (cap {g_cdl.max_width}×{g_cdl.max_height})"
+    )
 
     if args.dataset == "plan":
         if args.resume or args.min_year is not None or args.max_year is not None:
