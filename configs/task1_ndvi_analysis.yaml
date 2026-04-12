@@ -22,6 +22,7 @@ cdl:
   crop_classes:
     corn: 1
     soybean: 5
+    winter_wheat: 24
   data_path: data/raw/cdl/
 
 ndvi:
