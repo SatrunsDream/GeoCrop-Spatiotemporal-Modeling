@@ -4,6 +4,8 @@ data/interim/
 data/external/*.tif
 data/external/*.h5
 data/external/*.nc
+# Census TIGER Line (county zip + extract; large — cache locally)
+data/external/tiger/
 data/processed/
 
 # ── Python cache ──────────────────────────────────────────────────────────

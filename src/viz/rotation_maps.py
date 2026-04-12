@@ -127,6 +127,8 @@ def plot_rotation_class_map(
     figsize: tuple[float, float] = (12, 9),
     dpi: int = 200,
     nodata: int = 255,
+    focus_state_names: frozenset[str] | set[str] | None = None,
+    focus_pad_frac: float = 0.04,
 ) -> tuple[plt.Figure, plt.Axes]:
     """
     Plot a single-band uint8 rotation map (0/1/2) with RGB class colors.
@@ -135,6 +137,9 @@ def plot_rotation_class_map(
     ----------
     state_shapes
         Optional ``geopandas.GeoDataFrame`` in the same CRS as the raster (e.g. EPSG:5070).
+    focus_state_names
+        If set with ``state_shapes``, draw only those states' boundaries and set axis
+        limits to their union bounds (padding ``focus_pad_frac``) for a regional zoom.
     """
     raster_path = Path(raster_path)
     with rasterio.open(raster_path) as src:
@@ -154,14 +159,34 @@ def plot_rotation_class_map(
     fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
     ax.imshow(rgb, extent=list(extent), origin="upper", interpolation="nearest")
 
-    if state_shapes is not None and not getattr(state_shapes, "empty", True):
-        state_shapes.boundary.plot(
+    bnd_gdf = state_shapes
+    zoom_bounds: tuple[float, float, float, float] | None = None
+    if bnd_gdf is not None and not getattr(bnd_gdf, "empty", True) and focus_state_names:
+        names = frozenset(str(x) for x in focus_state_names)
+        name_col = next(
+            (c for c in ("NAME", "name", "NAME_1", "STATE_NAME") if c in bnd_gdf.columns),
+            None,
+        )
+        if name_col:
+            sub = bnd_gdf[bnd_gdf[name_col].isin(names)].copy()
+            if not sub.empty:
+                bnd_gdf = sub
+                zoom_bounds = tuple(sub.total_bounds)
+
+    if bnd_gdf is not None and not getattr(bnd_gdf, "empty", True):
+        bnd_gdf.boundary.plot(
             ax=ax,
             color="#1a1a1a",
             linewidth=1.1,
             alpha=0.9,
             zorder=10,
         )
+        if zoom_bounds is not None:
+            minx, miny, maxx, maxy = zoom_bounds
+            dx = (maxx - minx) * float(focus_pad_frac)
+            dy = (maxy - miny) * float(focus_pad_frac)
+            ax.set_xlim(minx - dx, maxx + dx)
+            ax.set_ylim(miny - dy, maxy + dy)
 
     patches = [
         mpatches.Patch(color=CLASS_COLORS[c], label=CLASS_LABELS[c])

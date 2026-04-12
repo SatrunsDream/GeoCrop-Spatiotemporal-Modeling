@@ -8,8 +8,9 @@ study_area:
 smap:
   product: SMAP_L4_SM                 # SMAP L4 surface soil moisture (9 km)
   temporal_resolution: weekly         # daily | weekly
-  data_path: data/raw/smap/
-  variable: sm_surface                # variable name in the HDF5/NetCDF file
+  data_path: data/raw/smap/           # raw HDF5 (optional; not used by Parquet pipeline)
+  processed_path: data/processed/smap/  # wide Parquet + metadata JSON per year
+  variable: sm_surface
 
 baseline:
   method: week_of_year                # day_of_year | week_of_year
@@ -23,11 +24,16 @@ event_window:
   description: "2019 Midwest / Missouri–Mississippi flooding — excess moisture event"
 
 cdl_mask:
-  year: 2019                          # CDL year to use for masking cropland
+  year: 2019
   crop_classes:
-    cropland_general: [1, 5, 26, 28]  # corn, soybean, winter wheat, oats (example)
+    cropland_general: [1, 5, 26, 28]  # corn, soybean, winter wheat, oats
+  processed_parquet: data/processed/cdl/cdl_stack_wide.parquet
   data_path: data/raw/cdl/
-  aggregation: area_weighted          # area-weighted fraction within each SMAP 9 km cell
+  aggregation: area_weighted
+
+spatial_subset:
+  # Join SMAP to Task 2 rotation-eligible pixels only (same ~2.08M cells — tractable I/O).
+  rotation_metrics_parquet: data/processed/task2/rotation_metrics.parquet
 
 output:
   figures_dir: artifacts/figures/task3/

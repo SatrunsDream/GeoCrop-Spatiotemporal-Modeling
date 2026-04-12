@@ -153,6 +153,9 @@ artifacts/
 | `artifacts/figures/task2/task2__runlength_distribution.png` | Discrete max run length (monoculture zone ≥7) |
 | `artifacts/figures/task2/task2__rotation_map__raw__20260411.png` | Rotation class map (raw) |
 | `artifacts/figures/task2/task2__rotation_map__smoothed__20260411.png` | Rotation class map (3×3 smoothed + annotations) |
+| `artifacts/figures/task2/task2__rotation_map__core_belt__*.png` | IA/IL/IN/NE zoom (NB04 `focus_state_names`) |
+| `artifacts/figures/task2/task2__rotation_class_by_county__*.png` | County choropleth of % regular — 13-state Belt (NB05 + TIGER) |
+| `artifacts/figures/task2/task2__rotation_class_by_county_core4__*.png` | County choropleth — IL / IN / IA / NE only (NB05) |
 
 ### Tables
 
@@ -162,6 +165,8 @@ artifacts/
 | `artifacts/tables/task4/task2__areal_stats_by_class__*.csv` | Areal summary by rotation class (grid ha); NB05 |
 | `artifacts/tables/task4/task2__areal_stats_by_class__*__metadata.json` | `pixel_area_ha`, grid resolution, CRS, disclaimer vs 30 m CDL |
 | `artifacts/tables/task4/task2__areal_stats_by_region__*.csv` | Class % by state (13-state join) |
+| `artifacts/tables/task4/task2__areal_stats_by_county__*.csv` | Class % by county (TIGER join; smoothed label; 13-state) |
+| `artifacts/tables/task4/task2__areal_stats_by_county_core4__*.csv` | Same; IL / IN / IA / NE counties only |
 | `artifacts/tables/task2/task2__threshold_sensitivity_grid.csv` | Full `alternation_min` × `pattern_dist_max` class shares |
 
 ### Models
@@ -237,16 +242,16 @@ artifacts/
 - **Next steps:** Report = strict primary + sensitivity figure; cite USDA definitions when comparing.
 
 #### notebooks/task2_crop_rotation/04_spatial_mapping_rotation.ipynb
-- **Purpose:** Publication-style maps from classified GeoTIFFs with **state boundary** overlays.
+- **Purpose:** Publication-style maps from classified GeoTIFFs with **state boundary** overlays; optional **core-belt zoom** (IA/IL/IN/NE).
 - **Inputs:** Smoothed/raw rotation rasters; `data/external/states/*.shp` if present, else **Natural Earth 110m** admin-1 (**13-state** Corn Belt) via `src.viz.rotation_maps.load_cornbelt_state_boundaries_5070`.
-- **Outputs:** `artifacts/figures/task2/task2__rotation_map__*__*.png`
+- **Outputs:** `artifacts/figures/task2/task2__rotation_map__*__*.png`, `task2__rotation_map__core_belt__*.png`
 - **Key findings:** Maps include **Corn Belt–wide** callout text; verify **bbox** so labels match the raster footprint.
 - **Next steps:** Side-by-side raw vs smoothed in report; adjust annotations if extent changes.
 
 #### notebooks/task2_crop_rotation/05_areal_statistics_export.ipynb
-- **Purpose:** Areal CSV + **metadata JSON** (grid ha, CRS, 30 m disclaimer) + **per-state (13 Corn Belt)** class shares + run bundle JSON.
-- **Inputs:** Smoothed rotation GeoTIFF; `rotation_metrics_classified.parquet`; spatial metadata; `load_cornbelt_state_boundaries_5070` (same as NB04)
-- **Outputs:** `artifacts/tables/task4/task2__areal_stats_by_class__*.csv`, `*__metadata.json`, `task2__areal_stats_by_region__*.csv`, `artifacts/figures/task2/task2__per_state_rotation_classes.png`, `artifacts/logs/runs/*/run_bundle.json`
+- **Purpose:** Areal CSV + **metadata JSON** (grid ha, CRS, 30 m disclaimer) + **per-state (13 Corn Belt)** class shares + **per-county** (Census TIGER) shares + run bundle JSON.
+- **Inputs:** Smoothed rotation GeoTIFF; `rotation_metrics_classified.parquet`; spatial metadata; `load_cornbelt_state_boundaries_5070` (same as NB04); `src.io.tiger_counties.load_cornbelt_counties_5070` (cached under `data/external/tiger/`)
+- **Outputs:** `artifacts/tables/task4/task2__areal_stats_by_class__*.csv`, `*__metadata.json`, `task2__areal_stats_by_region__*.csv`, `task2__areal_stats_by_county__*.csv`, `task2__areal_stats_by_county_core4__*.csv`, `artifacts/figures/task2/task2__per_state_rotation_classes.png`, `task2__rotation_class_by_county__*.png`, `task2__rotation_class_by_county_core4__*.png`, `artifacts/logs/runs/*/run_bundle.json`
 - **Key findings:** By-region rows are **state names** from spatial join (plus `outside_configured_states` / `full_raster_extent` fallback if boundaries unavailable) — not an Iowa–Nebraska longitude proxy.
 - **Next steps:** Re-run after stack changes; interpret empty rare states as extent, not pipeline failure.
 
@@ -254,40 +259,28 @@ artifacts/
 
 ### Task 3 — Soil Moisture Anomaly
 
-#### notebooks/task3_soil_moisture/01_smap_data_loading.ipynb
-- **Purpose:**
-- **Inputs:**
-- **Outputs:**
-- **Key findings:**
-- **Next steps:**
+Three notebooks (replaces former 01–05 stubs): **data prep → climatology + anomalies → maps/tables/bundle**.
 
-#### notebooks/task3_soil_moisture/02_baseline_climatology.ipynb
-- **Purpose:**
-- **Inputs:**
-- **Outputs:**
-- **Key findings:**
-- **Next steps:**
+#### notebooks/task3_soil_moisture/01_pixel_panel_smap_cdl.ipynb
+- **Purpose:** Build the spatial subset: **rotation-eligible** `iy, ix` + **CDL 2019** label; sanity histogram of one SMAP week on that subset.
+- **Inputs:** `data/processed/task2/rotation_metrics.parquet`, `data/processed/cdl/cdl_stack_wide.parquet`, `data/processed/smap/smap_weekly_2019_wide.parquet`
+- **Outputs:** `data/processed/task3/task3_pixel_panel.parquet`, `artifacts/figures/task3/task3__smap_week_histogram_subset.png`
+- **Key findings:** Confirms SMAP Parquet path works **without** interim NetCDF; subset keeps NB02 tractable.
+- **Next steps:** Run notebook 02.
 
-#### notebooks/task3_soil_moisture/03_anomaly_computation.ipynb
-- **Purpose:**
-- **Inputs:**
-- **Outputs:**
-- **Key findings:**
-- **Next steps:**
+#### notebooks/task3_soil_moisture/02_climatology_and_anomalies.ipynb
+- **Purpose:** **ISO week-of-year** μ and σ from **2015–2021**; **2019** event-window z-scores vs that climatology.
+- **Inputs:** `task3_pixel_panel.parquet`, SMAP wide Parquets + metadata JSONs, `configs/task3_soil_moisture.yaml`
+- **Outputs:** `data/processed/task3/smap_climatology.parquet`, `data/processed/task3/smap_anomaly_2019.parquet`
+- **Key findings:** One row per pixel-week in the event window with `z_score`, `sm_mean`, `sm_std`, `cdl_2019`.
+- **Next steps:** Run notebook 03 (figures + CSV).
 
-#### notebooks/task3_soil_moisture/04_spatial_anomaly_maps.ipynb
-- **Purpose:**
-- **Inputs:**
-- **Outputs:**
-- **Key findings:**
-- **Next steps:**
-
-#### notebooks/task3_soil_moisture/05_agricultural_impact_analysis.ipynb
-- **Purpose:**
-- **Inputs:**
-- **Outputs:**
-- **Key findings:**
-- **Next steps:**
+#### notebooks/task3_soil_moisture/03_maps_timeseries_tables.ipynb
+- **Purpose:** **4-panel** anomaly maps (ISO weeks 14, 18, 22, 27), **cropland mean z** time series with ±1σ band, **flood-duration** map (fraction of weeks with z > 1.5), **state × crop** summary CSV, `run_bundle.json`.
+- **Inputs:** `smap_anomaly_2019.parquet`, `cdl_stack_spatial_metadata.json`, Natural Earth / external state boundaries (via `load_cornbelt_state_boundaries_5070`)
+- **Outputs:** `artifacts/figures/task3/task3__anomaly_map_4panel__*.png`, `task3__anomaly_timeseries_cropland__*.png`, `task3__flood_duration_fraction__*.png`, `artifacts/tables/task3/task3__anomaly_stats_by_state_crop__*.csv`, `artifacts/logs/runs/*/run_bundle.json`
+- **Key findings:** Ties wet signal to **2019** planting-season window; table uses CDL **corn / soybean / winter wheat / oats** codes on the same pixels.
+- **Next steps:** Add prose interpretation (phenology calendar, NASS citations) in the report PDF.
 
 ---
 

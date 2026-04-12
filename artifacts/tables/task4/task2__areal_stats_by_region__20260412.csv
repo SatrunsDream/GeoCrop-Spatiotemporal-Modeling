@@ -1,0 +1,15 @@
+region,n_pixels,pct_regular,pct_monoculture,pct_irregular
+Illinois,293524,40.35,5.07,54.58
+Indiana,156899,34.29,4.23,61.48
+Iowa,321601,39.87,6.93,53.2
+Kansas,108705,14.24,8.11,77.65
+Kentucky,38066,20.54,3.88,75.57
+Michigan,66989,12.59,3.92,83.49
+Minnesota,223678,31.31,3.26,65.43
+Missouri,120804,23.12,7.24,69.64
+Nebraska,212194,27.13,11.96,60.91
+North Dakota,118282,11.29,2.81,85.9
+Ohio,120718,22.85,5.69,71.46
+South Dakota,154733,28.17,1.46,70.37
+Wisconsin,81812,13.55,5.45,81.0
+outside_configured_states,66107,5.1,16.47,78.43

@@ -1,0 +1,1370 @@
+Remote Sensing of Environment 181 (2016) 237­250
+Contents lists available at ScienceDirect
+Remote Sensing of Environment
+journal homepage: www.elsevier.com/locate/rse
+
+A hybrid approach for detecting corn and soybean phenology with
+time-series MODIS data
+Linglin Zeng a,b,, Brian D. Wardlow c, Rui Wang d, Jie Shan e, Tsegaye Tadesse f, Michael J. Hayes f, Deren Li b,g
+a School of Resource and Environmental Science, Wuhan University, 129 Luoyu Road, Wuhan 430079, China b Collaborative Innovation Center of Geospatial Technology, 129 Luoyu Road, Wuhan 430079, China c Center for Advanced Land Management Information Technologies, University of Nebraska-Lincoln, 3310 Holdrege St., Lincoln 68583, USA d Changjiang Geotechnical Engineering Corporation, 1863 Jiefang Street, Wuhan 430010, China e School of Civil Engineering, Purdue University, 550 Stadium Mall Dr., West Lafayette 47907, USA f National Drought Mitigation Center, University of Nebraska-Lincoln, 3310 Holdrege St., Lincoln 68583, USA g State Key Laboratory of Information Engineering in Surveying, Mapping and Remote Sensing, Wuhan University, 129 Luoyu Road, Wuhan 430079, China
+
+article info
+Article history: Received 25 October 2015 Received in revised form 12 March 2016 Accepted 31 March 2016 Available online 29 April 2016
+Keywords: Air temperature Photoperiod Land surface temperature Remote sensing Crop phenology
+
+abstract
+Monitoring crop phenology provides essential information for crop management, as well as for understanding regional to global scale vegetation dynamics. In this study, a hybrid phenology detection method is presented that incorporates the "shape-model fitting" concept of the two-step filtering method and a simulation concept of the crop models to detect the critical vegetative stages and reproductive stages of corn (Zea mays L.) and soybeans (Glycine max L.) from MODIS 250-m Wide Dynamic Range Vegetation Index (WDRVI) time-series data and 1000-m Land Surface Temperature (LST) data. The method was first developed and tested at the field scale over a ten-year period (2003­2012) for three experimental study sites in eastern Nebraska of USA, where the estimated phenology dates were compared to the ground-based phenology observations for both corn and soybeans. The average root mean square error (RMSE) of phenology stage estimation of the individual development stages across all sites ranged from 1.9 to 4.3 days for corn and from 1.9 to 4.9 days for soybeans. The approach was then tested at a regional scale over eastern Nebraska and the state of Iowa to evaluate its ability to characterize the spatio-temporal variation of targeted corn and soybean phenology stage dates over a larger area. Quantitative regional assessments were conducted by comparing the estimated crop stage dates with crop developmental stage statistics reported by the USDA NASS Crop Progress Reports (NASS-CPR) for both eastern Nebraska and Iowa. The accuracy of the regional-scale phenology estimation in Iowa (RMSE ranged from 2.6 to 3.9 days for corn and from 3.2 to 3.9 days for soybeans) was slightly lower than in eastern Nebraska (RMSE ranged from 1.8 to 2.9 days for corn and from 1.7 to 2.9 days for soybeans), However, the estimation accuracy in Iowa was still reasonable with the estimated phenology dates being within 4 days or less of the observed dates for both corn and soybeans.
+© 2016 Elsevier Inc. All rights reserved.
+
+1. Introduction
+Accurate measurements of regional- to global-scale vegetation dynamics and phenology information improve our understanding of inter-annual vegetation change in terrestrial ecosystems, as well as climatic and other environmental variations from year to year (Brown, de Beurs, & Marshall, 2012; Brown, Wardlow, Tadesse, Hayes, & Reed, 2008; Cleland, Chuine, Menzel, Mooney, & Schwartz, 2007; Cong et al., 2013; Peña-Barragán, Ngugi, Plant, & Six, 2011; Pettorelli et al., 2005; Schwartz, 1998). The phenological stages of crops provide essential
+ Corresponding author at: Collaborative Innovation Center of Geospatial Technology, 129 Luoyu Road, Wuhan 430079, China.
+E-mail addresses: zenglinglin@whu.edu.cn (L. Zeng), bwardlow2@unl.edu (B.D. Wardlow), wangrui@cjwsjy.com.cn (R. Wang), jshan@purdue.edu (J. Shan), ttadesse2@unl.edu (T. Tadesse), mhayes2@unl.edu (M.J. Hayes), drli@whu.edu.cn (D. Li).
+
+information for agricultural activities such as irrigation scheduling and fertilizer management (Sakamoto et al., 2010). In addition, accurate information on the timing of key crop growth stages is a key input for estimating crop yield based on remote sensed vegetation index (VI) data (Bolton & Friedl, 2013; Funk & Budde, 2009; Sakamoto, Gitelson, & Arkebauer, 2013).
+A traditional approach to estimating crop phenology has been through the use of crop models, many of which have been developed to simulate corn and soybean growth responding to various environment conditions in which a crop is grown. They include generic crop models, which describe the processes of assimilation, respiration, development and growth without regard to crop species (e.g. SUCROS (Simple and Universal CROp growth Simulator) (Spitters, van Keulen, & van Kraalingen, 1989), WOFOST (WOrld FOod STudies) (Diepen, Wolf, Keulen, & Rappoldt, 1989) and INTERCOM (INTERplant COMpetition) (Kropff & van Laar, 1993)) and crop-specified models, which were
+
+http://dx.doi.org/10.1016/j.rse.2016.03.039 0034-4257/© 2016 Elsevier Inc. All rights reserved.
+
+238
+
+L. Zeng et al. / Remote Sensing of Environment 181 (2016) 237­250
+
+developed to simulate growth and development of a specific crop type (e.g. Hybrid-Corn (Yang et al., 2004) and Soysim (Setiyono et al., 2007)). Such models can often estimate phenological dates with a high level of accuracy (RMSE: 0­4 days), but they require a number of detailed information inputs summarizing crop (e.g. cultivar used and plant population), soil (e.g. initial soil moisture), and weather (e.g. temperature, rainfall, solar radiation and wind speed) conditions (Bhatia, 2014; Yang et al., 2004). The use of these crop models is also limited by the availability of the required data inputs and the models usually need to be calibrated for particular species and site-specific conditions based on ground data (Bhatia, 2014). As a result, the phenological information generated is site-specific and typically cannot monitor crop phenology beyond the field scale over larger areas.
+Satellite remote sensing observations from global imaging sensors such as the Advanced Very High Resolution Radiometer (AVHRR) and the Moderate Resolution Imaging Spectroradiometer (MODIS) collect image data and offer considerable potential to characterize regionalscale spatio-temporal patterns of the key phenological stages of key cash crops such as corn and soybeans on a gridded basis in a consistent, time- and cost-efficient manner. MODIS data have become increasingly used for crop mapping and monitoring at a regional scale, because of its unique combination of high temporal (near daily) and moderate spatial (i.e., 250-m and 500-m) resolutions (Funk & Budde, 2009; Galford et al., 2008; Ozdogan & Gutman, 2008; Sakamoto et al., 2010; Wardlow & Egbert, 2008; Wardlow, Egbert, & Kastens, 2007; Zhang et al., 2003). The commonly used remote-sensing based phenology detection methods can be divided into four groups: 1) threshold methods that estimate phenological stages by using either a fixed or dynamic threshold (Delbart, Le Toan, Kergoat, & Fedotova, 2006; Fischer, 1994; Lloyd, 1990; White & Nemani, 2006); 2) moving window methods that determine the phenology dates by vegetation index (VI) changes of a time-series VI curve in a defined moving temporal window (e.g. 20 days) (Balzter et al., 2007; Reed et al., 1994; Tateishi & Ebata, 2004); 3) function fitting methods that apply mathematical functions (e.g. logistic(Zhang et al., 2003), wavelet (Sakamoto et al., 2005) or Fourier transformation) to fit the VI time-series curves to a given function and extract phenological stages through the detection of defined feature points (e.g., second derivative equals 0) on the function curves; and 4) the shape model method such as the two-step filtering (TSF) approach developed by Sakamoto et al. (2010) that applies a novel shape-model fitting concept to times-series VI curves for date identification.
+The first three remote-sensing based phenology detection methods summarized above are generally based on mathematical methods that directly detect the feature points in time-series VI curve as the transition dates of crops and other types of vegetation (Wardlow, Kastens, & Egbert, 2006; Xu, Twine, & Yang, 2014; Zhang et al., 2003). Usually, these dates represent general vegetation growth stages (e.g., greenup onset, peak greenness and dormancy onset (Zhang et al., 2003)) but have little association with the specific agronomic stages of a specific kind of crops (e.g. corn, soybeans). Some key crop growth stages (e.g. R1 (beginning bloom), R3 (beginning pod) stages of soybeans) are challenging or cannot be directly detected from the VI time-series curve. For example, the detection of the R5 (beginning seed) stage of soybeans is relatively easy, as VI reaches a maximum value at or near R5 stage (Bastidas, 2005). In contrast, the soybean R1 flowering stage, which is a crucial phenology stage associated with yield, is difficult to be detected because there is no distinctive vegetation change feature (e.g., rapid increase in greenness) represented in the time-series VI data at this stage. In addition, these phenology detection methods are often sensitive to observation errors and noise caused by atmospheric constituents (e.g., water vapor), thick cloud coverage, bi-directional reflectance distribution function (BRDF) effect, and the mixed-pixel effect due to viewing geometry in time-series VI data products (Sakamoto et al., 2010). Wardlow et al. (2006) used Zhang et al. (2003) method to estimate the green up onset date of summer crops (maize, sorghum, and soybean) across the state of Kansas for 2001. Xu et al. (2014) tested
+
+six common remotely sensed phenology detection methods that were mainly based on feature points of the time-series VI data to detect the leaf onset and offset of temperate forest, and found that most methods had large biases in the estimation of these dates (RMSE ranged from 6.5 to 45.3 days).
+The TSF approach showed considerable potential for the detection of several specific agronomic stages of corn and soybeans with a high date estimation accuracy (root mean square error (RMSE) ranging from 2.9 to 7.0 days and from 3.2 to 6.9 days for corn and soybeans, respectively). Optimum parameters were derived representing the macroscopic features in time-series VI data rather than focusing on the localized features in the time-series around the green up and maturity stages, which avoid the influence of the localized fluctuations often representing errors or noise in the data (Sakamoto et al., 2010). However this method was based on an assumption that the shape model is linearly scalable to fit the time-series VI profile of a crop's growth pattern through geometrical scaling, regardless of all the factors that would influence the crop's growth pattern expressed in the VI data, which can vary from year to year (Sakamoto et al., 2010). For example, important environmental factors that influence annual crop growth, such as air temperature and photoperiod, were not taken into consideration. Air temperature is generally one of the decisive factors that affect the growth rate of all crops. Photoperiod is even a more important factor for some photosensitive crops, as longer daylength decreases the development rate by delaying reproductive development. (e.g., soybeans). As a result, the growth rates of both corn and soybeans for each phenological stage under different environmental conditions can vary from year to year. In addition, a number of critical phenology stages for both crops were not included in Sakamoto's study (2010), such as the milk stage (R2) of corn and beginning bloom (R1) and full pod length (R4) stages of soybeans. Information on these stages is important for a number of applications including crop production estimates and irrigation scheduling. For example, the period from mid-pod elongation to just before the start of seed enlargement is most critical for soybean seed yield responses to irrigation (Kadhem, Specht, & Williams, 1985).
+The objective of this paper is to present a hybrid phenology detection approach that incorporates the "shape-model fitting" concept of the TSF method (Sakamoto et al., 2010) and simulation concept of traditional crop model that incorporates other environmental factors that influence crop development. The approach is designed to detect the critical vegetative stages (V1 and V6 for corn and V1 for soybean) and reproductive stages (R1 to R6 for corn and R1 to R7 for soybean) of corn and soybeans from the MODIS 250-m Wide Dynamic Range Vegetation Index (WDRVI) time-series data. This method was tested over a ten-year period (2003 to 2012) for three experimental field sites to calibrate and quantitatively assess its performance with ground-based crop phenology observations for each site. It was also tested regionally over eastern Nebraska and the state of Iowa to evaluate its ability to characterize spatio-temporal variation of the targeted corn and soybean phenology stage dates across a larger major crop-producing region. Regional results were quantitatively assessed using crop developmental stage statistics reported by the U.S Department of Agriculture National Agricultural Statistics Service (USDA NASS).
+2. Study area and ground-based observations
+The ground-based, crop growth stage observations were collected over three field sites that are part of the Carbon Sequestration Program (CSP, http://csp.unl.edu/Public/sites.htm) at the University of NebraskaLincoln's (UNL) Agricultural Research and Development Center (ARDC) in eastern Nebraska (Fig. 1). Two sites (41°9 54.2N, 96°28 35.9W, 361 m and 41°9 53.5N, 96°28 12.3W, 362 m) are equipped with center-pivot irrigation systems while the third site (41° 10 46.8N, 96° 26 22.7W, 362 m) is a non-irrigated, rainfed system. Site 1 was continuously planted to corn since 2001, while site 2 was planted in a corn (odd years)­soybean (even years) rotation before 2009 and
+
+L. Zeng et al. / Remote Sensing of Environment 181 (2016) 237­250
+
+239
+
+3. Data description and preprocessing
+
+3.1. WDRVI data calculated from MODIS surface reflectance data
+
+The source data for the WDRVI time-series data set were the MODIS 8-day composite, 250 m surface reflectance data (MOD09Q1, Collection 5) from 2003 to 2012. These data include 250 m red (band 1) and near infrared (NIR; band 2) reflectance. The study area covers two MODIS tiles (i.e., h10v04 and h11v04). The image data for the two tiles were mosaicked and reprojected from Sinusoidal to Universal Transverse Mercator (UTM, Zone 15 and WGS-84).
+WDRVI, developed by Gitelson (2004), was used in this study instead of the Normalized Difference Vegetation Index (NDVI) (Rouse, Haas, Schell, & Deering, 1974), which has been widely used to monitor vegetation conditions, because the WDRVI represents a VI with higher sensitivity than NDVI at moderate-to-high LAI values (at least three times greater) and demonstrated ability to maintain a linear relationship across the range of LAI values for both corn and soybeans (Gitelson, 2004; Gitelson, Wardlow, Keydan, & Leavitt, 2007; Sakamoto et al., 2010). Accordingly, WDRVI was selected to be used in this study and calculated using Eq. (1).
+
+WDRVI ¼ ðnir-redÞ=ðnir þ redÞ
+
+ð1Þ
+
+where nir and red are the MODIS surface reflectance values in the NIR band (841­875 nm, Band 2) and red band (621­670 nm, Band1) and  is weighting coefficient. Since WDRVI may be negative for low vegetation density, a scaled WDRVI (Peng, Gitelson, & Sakamoto, 2013) was used in this study calculated using Eq. (2).
+
+Scaled WDRVI ¼ f½ð-1Þ þ ð þ 1Þ Â NDVI=½ð þ 1Þ þ ð-1Þ Â NDVI
+
+þð1-Þ=ð1 þ Þg Â 100
+
+ð2Þ
+
+Fig. 1. The ASDs of eastern Nebraska and Iowa, as well as the location and schematic of the study sites at the UNL ARDC near Mead, Nebraska (the satellite image was from CSP website, http://csp.unl.edu/Public/sites.htm).
+
+NDVI ¼ ðnir-redÞ=ðnir þ redÞ
+
+ð3Þ
+
+where nir and red are also the MODIS surface reflectance valued in the NIR and red bands and  = 0.1 was used (Peng et al., 2013).
+
+continuously planted to corn since 2009. Site 3 has been planted in a corn (odd years)­soybean (even years) rotation since 2001. Like Sakamoto's study (2010), these three study sites will also be referenced according to their respective cultivation methods as the Irrigated Continuous Maize (ICM) for Site 1, Irrigated Maize­Soybean (IMS) for Site 2, and Rainfed Maize­Soybean (RMS) for Site 3 in this paper.
+The ground-based crop growth stage observations were collected by agronomists once every 3 to 10 days during the growing season and recorded based on general stage system (vegetation (V)-stage or reproductive (R)-stage), as well as numerical staging system (e.g. V1 = 1, ..., V15 = 15, ..., R1 = 22, ..., R6 = 27). The numerical staging value of the sites was calculated by averaging the numerical staging value of several intensive management zones (IMZs) within each field covering 20 m2 areas where crops are intensively monitored and measured. The numerical phenological stage value of each IMZ was calculated by averaging the numerical stage value of all individual plants in the IMZ. In terms of relating remotely sensed observations with these field-level observations, generally, a median date when 50% of the crops are in a specific phenological stage are used as the transition date between respective stages (Sakamoto et al., 2010; Wardlow et al., 2006). To use the ground-based observations as the reference data to assess the remotely sensed phenology date estimates, the median dates of each field based on numerical staging for each phenological stage of all IMZs in this field were calculated by linear interpolation. For example, if the averaged date value across all IMZs of certain field was 22 for the R1 stage and 23 for the R2 stage, then the numerical date value of 22.5 was used as the transition date from the R1 to R2 stage of the field.
+
+3.2. Average air temperature data calculated from MODIS land surface temperature products
+Both daily daytime and nighttime 1-km land surface temperature (LST) data (MOD11A1, Collection 5) from 2003­2012 were used to estimate air temperature, which is a critical input for crop models in this study. Air temperature was calculated using a linear regression model (Zeng et al., 2015), and the calibration and validation were based on both the daily observed air temperature from CSP at the field scale, as well as the GHCN (Global Historical Climatology Network) daily database from NOAA's National Climatic Data Center (NCDC, http://www. ncdc.noaa.gov/) at the regional scale. Both daytime and nighttime LST data were used to estimate daily maximum air temperature (Tmax), but only nighttime LST data was used to estimate daily minimum air temperature (Tmin) as daytime LST was found to have little value to estimate Tmin, with the RMSE of estimated Tmax and Tmin based on LST data of 2.27 and 1.75 °C, respectively (Zeng et al., 2015). The daily averaged air temperature (Tavg) was calculated by averaging the daily maximum and minimum air temperatures. The 8-day composite air temperature was then calculated by averaging Tavg of cloud-free days during the 8 day composite period by selecting the pixels that were flagged in the MODIS quality assurance data as cloud-free and high quality.
+3.3. Crops data layer
+NASS Cropland Data Layer (CDL; http://www.nass.usda.gov/ research/Cropland/SARS1a. htm) was used in this study to select target
+
+240
+
+L. Zeng et al. / Remote Sensing of Environment 181 (2016) 237­250
+
+Table 1 Temperature and photoperiod parameter used for the soybean model in this study.
+
+Stage
+
+Tbase (°C)
+
+Topt (°C)
+
+Tup (°C)
+
+Pcrt (h)
+
+Popt (h)
+
+B
+
+VE-R1 7.6 R1-R7 0
+
+31.0
+
+40.0
+
+25
+
+11
+
+6
+
+21.5
+
+38.7
+
+18
+
+12
+
+0.83
+
+VE: Emergence. It is defined as when the hypocotyl length exceeds sowing depth plus 0.6 cm and happens before V1 (Setiyono et al., 2007).
+
+corn and soybean pixels over Iowa and Nebraska. An area-ratio threshold of 75% was adopted to select all MODIS 250 m pixels across the region that was covered predominately by either corn or soybeans (Sakamoto et al., 2010). A relatively high area-ratio threshold (75%) was empirically determined to reduce the number of mixed pixels containing large percentages of multiple land cover types in order to collect a representative sample of time-series WDRVI curves of corn and soybeans, respectively, across eastern Nebraska and the state of Iowa for analysis (Sakamoto et al., 2010).
+3.4. Crop progress reports
+Crop Progress Reports (CPRs) are weekly crop progress information about corn and soybeans reported by the Nebraska Agricultural Statistics Service and Iowa Agricultural Statistics Service. In this study, the CPR information was used as the pseudo-ground phenology observation dataset to evaluate the accuracy estimation of MODIS-derived, regional phenology dates. These progress reports of crop developmental stages are recorded as an area ratio at the Agricultural Statistic District (ASD)-level in Nebraska for 2002 and in Iowa annually after 2008. The weekly area ratio of each crop phenological stage was linearly interpolated to calculate the median date when 50% of the corn/soybeans in the ASDs reaches each stage. (Sakamoto et al., 2010). The MODIS-derived estimates for corn and soybean phenological dates for each district were calculated by averaging the phenological dates of all the selected corn and soybean pixels across each ASD, respectively.
+The most commonly used plant phenology staging system for soybeans was V & R staging system developed by (Fehr, Caviness, Burmood, Pennington, & Alexander, 1971). There are some differences between the crop developmental stages measuring system used in NASS-CPR and the V & R staging system used for the three CSP field study sites, which were used as calibration data to build the model in this study. For example, there is no stage in V & R stage system corresponding to a stage in the NASS-CPRs scheme such as "soybean leaves turning color". Therefore, like in the work of Sakamoto et al. (2010), the crop development stages in the NASS-CPRs were matched with a specific agronomic stage estimated from WDRVI data based on their similar timing in corn and soybean's growth cycles.
+
+4. Methodology
+
+4.1. Crop models for corn and soybeans
+
+Plant growth processes are mainly influenced by interactions among genotype, environment conditions and crop management (Asseng & Turner, 2005; Soltani, Maddah, & Sinclair, 2013). In this study, we assumed that the influence of genotype and crop management (i.e., proper management of pests and diseases and fertilizer applications was implemented) was minimal as compared to environmental factors such as temperature that are considered in crop growth models. For this study, the developmental stages of corn were assumed to be most closely related to air temperature (Abendroth, Elmore, Boyer, & Marlay, 2011; Bannayan, Hoogenboom, & Crout, 2004; Tollenaar, Daynard, & Hunter, 1979), while the two dominant abiotic factors influencing soybean phenology are air temperature and photoperiod (Bastidas, 2005; Cregan & Hartwig, 1984; Hesketh, Myhre, & Willey, 1973; Setiyono et al., 2007; Summerfield & Wilcox, 1978).
+The models that describe the relationship between crop development and environment factors (e.g., temperature) include linear and nonlinear models. Linear models are simpler to apply, but nonlinear models often describe the biological processes underlying crop growth in more detail (Streck, Lago, Gabriel, & Samboranha, 2008; Wang & Engel, 1998). Non-linear approaches have been shown to provide better predictions of plant development stages than linear models for a number of different crops including corn (Cutforth & Shaykewich, 1990), soybeans (Setiyono et al., 2007), wheat (Schr der & Sondgerath, 1996), potato (Fleisher, Shillito, Timlin, Kim, & Reddy, 2006), rice (Yin, Kropff, Mclaren, & Visperas, 1995).
+The Wang-Engel (WE) model (Wang & Engel, 1998) simulates crop development using nonlinear models with response functions that range from zero to one. The temperature response function in the WE model is described by a beta function with three parameters (i.e., minimum, optimum and maximum air temperatures). When the temperature is below the minimum or above the maximum temperature, crop development does not take place and the temperature response function equals zero. When the temperature is at optimum, which is a value between minimum and maximum temperature (e.g., 28°C for corn), development takes place at the maximum rate and temperature response function equals one (Wang & Engel, 1998). The WE model was originally developed for winter wheat (Wang & Engel, 1998), but has also been used to simulate the development of other annual crops including potatoes (Streck, Paula, Bisognin, Heldwein, & Dellai, 2007), soybeans (Setiyono et al., 2007) and corn (Streck et al., 2008) with a positive results modeling the development of these crops. Accordingly, the WE model was used in this study to describe the development of corn and soybeans responding to air temperature (Eqs. (4)­(8)).
+
+rcorn ¼ r max f ðTÞ
+
+ð4Þ
+
+Fig. 2. The shape model of (a) corn and (b) soybean derived by curve fitting with characteristic points indicating the start of the specific phenological stages.
+
+L. Zeng et al. / Remote Sensing of Environment 181 (2016) 237­250
+
+241
+
+T ¼ ðT max þ T minÞ=2
+
+ð5Þ
+
+f ðTÞ ¼ 0; if T  Tup or T Tbase
+
+ð6Þ
+
+h
+
+i
+
+f ðTÞ ¼ 2ðT-TbaseÞðTopt-TbaseÞ-ðT-TbaseÞ2
+
+ð7Þ
+
+.h
+
+i
+
+ðTopt-TbaseÞ2 ; Tbase  T  Tup
+
+ ¼ ln ð2Þ= ln½ðTup-TbaseÞ=ðTopt-TbaseÞ
+
+ð8Þ
+
+where rmax is the maximum development rate (per day). It is assumed that corn in this study was not affected by factors other than temperature and developed at a same rate in all stages, so rmax is a constant 1; Tmax and Tmin are the daily maximum and minimum near surface air temperature estimated from MODIS data. T is the daily average air temperature (averaged by daily maximum and minimum air temperature). f(T) is a temperature response function, which varies from 0 to 1. Tup, Tbase and Topt are the above mentioned three parameters (minimum, optimum, and maximum air temperature, respectively). It was assumed that Tbase = 8 °C, Topt = 28 °C, and Tup = 36 °C (Cutforth & Shaykewich, 1990).
+Temperature and photoperiod are the two main dominant abiotic factors influencing soybean phenology. The soybean phenology simulation model developed by Setiyono et al. (2007) was used in this study. Setiyono et al. (2007) used temperature and photoperiod to simulate soybean phenology based on five main phases: emergence, main stem node appearance, flowering, pod, seed set and maturity. However, due to the limitation of ground-based observation data, soybean phenology simulation in this study was simplified to two main phases: vegetation stage and reproductive stage. The daily development rate was calculated with temperature and photoperiod response function (Eq. (9)). The temperature response function was also based on WE model using a nonlinear beta function (Eqs. (6)­(8)). It used different values of temperature parameters in different stages (Table 1). The photoperiod response function was also based on a nonlinear beta function (Eqs. (10) ­ (12)).
+
+rsoybean ¼ r maxf ðTÞ Â f ðPÞ
+
+ð9Þ
+
+f ðPÞ
+
+¼
+
+"P-Popt 2a
+
+þ 1PcPrctr-t-PoPptðPcrt-PoptÞ=m# ;
+
+if
+
+Popt
+
+
+
+P
+
+
+
+Pcrt;
+
+ð10Þ
+
+Fig. 3. An example of the calculation of DOY from APTT.
+
+f ðPÞ ¼ 0; if P N Pcrt; f ðPÞ ¼ 1; if P b Popt
+
+ð11Þ
+
+ ¼ ln ð2Þ= ln ½ðPcrt-PoptÞ=m þ 1
+
+ð12Þ
+
+where P is the daylength calculated using the algorithm described in Keisling (1982). It is assumed that soybeans in this study were not affected by factors other than temperature and photoperiod. In addition, soybeans developed at a same rate in all stages, so rmax is a constant 1; Pcrt is the daylength above which development rate is zero (h), Popt is the daylength below which development rate is optimum (h), P is the daylength that was calculated using the algorithm described in (Keisling, 1982) paper. m is the constant (3.0 h). Tbase, Tut, Topt, Popt and Pcrt used in this study are from Setiyono et al.'s (2007) study (Table 1).
+4.2. Combining crop models with time-series WDRVI data
+
+Photothermal time which combined both temperature and photoperiod information was used to describe leaf appearance rate and phenological response of various plant species (Deen, Hunt, & Swanton, 1998; Ellis, Roberts, & Summerfield, 1988; Masle, Doussinault, Farquhar, & Sun, 1989). To combine the crop model and time-series MODIS WDRVI data, the concept of photothermal time (accumulated photothermal time, APTT) was introduced in this study. It was defined as the accumulated development rate (r) which was calculated using the temperature and photoperiod response function (Eq. (13)). It was used instead of calendar time (Day of Year (DOY)) on the time axis (Fig. 2). Usually, the planting
+
+Table 2 The predefined APTT of target phenological stages for corn and soybean respectively.
+
+Corn (stage)
+
+Stage description
+
+X0
+
+Soybeans (stage)
+
+Stage description
+
+X0
+
+V1(vegetative stage 1) V6 (vegetative stage 6) R1(silk) R2(blister) R3(milk)
+R4(dough) R5(dent)
+R6(maturity)
+
+Collar is visible on lowest leaf. There are six leaves with visible collars; It is one of the key stages for development. Any silk becomes visible outside the husk leaves; This stage is most sensitive to drought Stress. Small, white kernels, and kernel fluid is clear.
+Yellow kernels, milky white fluid in kernel; stress at this stage will greatly affect yield.
+Paste-like, or dough, kernel contents;
+Kernels dent on the top due to starch accumulation;
+Physiological maturity with maximum dry matter accumulation;
+
+- 29.0 9.3
+74.1 88.0 98.8
+111.0 129.5
+172.4
+
+V1 (first trifoliolate) R1 (beginning bloom) R2 (full bloom) R3 (beginning pod) R4 (full pod)
+R5 (beginning seed) R6(Full seed)
+R7 (beginning maturity)
+
+Completely unrolled leaf at the unifoliolate node One flower at any node.
+Flower at node immediately below the uppermost node with a completely unrolled leaf. Pod 0.5 cm long at one of the four uppermost nodes with a completely unrolled leaf. Pod 2 cm long at one of the four uppermost nodes with a completely rolled leaf. Stress occurring anytime from this stage to shortly after R6 will reduce yields more than the same stress at any other period. Beans beginning to develop at one the four uppermost nodes with a completely unrolled leaf. Pod containing full size green beans at one of the four uppermost nodes with a completely unrolled leaf Pods yellowing; 50% of leaves yellow; Physiological maturity.
+
+- 3.7 7.1
+10.2 21.2 27.0
+31.8 43.9
+72.0
+
+References related the description: Abendroth et al. (2011), Fehr et al. (1971), Pedersen (2009).
+
+242
+
+L. Zeng et al. / Remote Sensing of Environment 181 (2016) 237­250
+
+Table 3 Summary of the optimum scaling parameters for 10 years (2003­2012).
+
+Crop
+
+Management
+
+xscale
+
+xshift
+
+na
+
+Mean
+
+Max
+
+Min
+
+Stdev
+
+Mean
+
+Max
+
+Min
+
+Stdev
+
+Corn Soybean
+
+ICM IMS RMS IMS RMS
+
+1.05
+
+1.07
+
+0.98
+
+0.056
+
+- 0.82
+
+4.00
+
+- 7.21
+
+3.95
+
+10b
+
+1.03
+
+1.09
+
+0.96
+
+0.072
+
+- 2.72
+
+3.03
+
+- 7.01
+
+3.29
+
+7
+
+1.05
+
+1.15
+
+0.95
+
+0.120
+
+4.55
+
+11.89
+
+- 1.99
+
+6.36
+
+5
+
+0.98
+
+1.01
+
+0.96
+
+0.016
+
+0.98
+
+1.01
+
+0.97
+
+0.01
+
+3c
+
+0.98
+
+1.01
+
+0.97
+
+0.019
+
+3.82
+
+5.66
+
+1.59
+
+1.45
+
+5
+
+a n is the number of the comparison data. b Includes the 7 pixels used for making the shape model (ICM 2003, 2005­2006, 2008, 2010­2012). c Includes the 3 pixels used for making the shape model (IMS 2004, 2006 and 2008).
+
+date varied from year to year, so to ensure that APTT value was calculated from the actual onset of growth, a starting point of APTT was set as the beginning of greenness of the crops (S0, Fig. 2), which was derived using a method developed by Zhang et al. (2003).
+
+X APTT ¼ r max f ðTÞ Â f ðPÞ
+onset
+
+ð13Þ
+
+where Onset is when corn or soybeans rich beginning of greenness derived by Zhang's method (Zhang et al., 2003). f(T) and f(P) are temperature and photoperiod response functions. f(P) of corn equals constant 1, as the growth of corn is insensitive to photoperiod to some extent. In order to combine APTT time and time-series WDRVI data, the APTT was calculated at the same eight-day interval with the eight-day composite periods of the MODIS WDRVI data.
+4.3. Smoothing of MODIS WDRVI data
+The standard 8-day composite MODIS surface reflectance (MOD09) data, which was used to calculate WDRVI data still includes various noise components such as residual clouds and bidirectional reflectance distribution function (BRDF) effects. Therefore, a data smoothing method was applied to original WDRVI data set to minimize the influence of noise. The Savitzky­Golay Filter method (Chen et al., 2004) was used to de-noise and rebuild the time-series VI data. As compared with other methods, the Savitzky­ Golay filter has been found to be efficient at reducing contamination in the MODIS VI time series data caused primarily by cloud contamination and atmospheric variability (Chakraborty & Das, 2012; Chen et al., 2004; Wang, Fritschi, Stacey, & Yang, 2011; Zhang et al., 2008; Zhang, Feng, & Yao, 2014).
+
+4.4. Building a shape model
+The shape model is expected to represent the typical multi-temporal trajectory of a WDRVI profile for corn and soybeans as was demonstrated in the Sakamoto et al. (2010) study. In order to generate the shape model from an idealized temporal VI for both crops, their shape models were built under APTT from the two irrigated study sites only, as water stress plays a significant role in influencing the phenology of crops, which might delay/accelerate the growth progress or suppress key phenological features in the VI observations under extreme drought or excessively wet conditions (Desclaux & Roumet, 1996; Meckel, Egli, Phillips, Radcliffe, & Leggett, 1984; Viña et al., 2004). As the peak WDRVI value can vary year to year, the smoothed WDRVI time series data of each year were stretched in Y direction to make sure the peak WDRVI value equals the median peak value (110 for corn and 112 for soybeans), which was derived from the time-series data used to build the shape model for both corn and soybeans, respectively. After the preliminary Y-scale and X-shift (detecting the onset date of growth), the discrete points of smoothed WDRVI data used to build the shape models for corn and soybeans were fitted by the sum of three sine function, respectively (Fig. 2). The smoothed WDRVI data of the ICM site for seven years (2003, 2005­2006, 2008, 2010­2012) were used to develop the corn shape model (to build more representative model, data for 2004, 2007, and 2009 were excluded, as due to the noise of remote sensing data or other factors that affect the growth of corn, the data of these three years could not achieve high degree of consistency with the data of other years by preliminary Xshift and Yscale,), and data from the IMS site for three years (2004, 2006 and 2008) were used to create the soybean shape model. The predefined APTT X0 for each phenological stage was calculated by averaging the APTT of each phenological stage' transition dates of all the observations used to build the shape model (Table 2).
+
+Fig. 4. An example of time-series WDRVI curve under calendar time (a) and photothermal time (b) with characteristic points indicating the transition dates of the specific phenological stages. (V2 stage was used in this figure as V1 stage was not recorded in 2003).
+
+L. Zeng et al. / Remote Sensing of Environment 181 (2016) 237­250
+
+243
+
+4.5. Fitting the smoothed WDRVI data on the shape model
+
+Similar to building the shape model, the smoothed WDRVI time series data for each year were stretched by a Y-scale to make sure that the peak value was equal to the median peak value. Then the shape model is fitted on the smoothed WDRVI time-series data. Like the Sakamoto et al. (2010) study, the optimum scaling parameters (xscale, xshift) that approximate the fit of the smoothed WDRVI data to the shape model were calculated based on the smallest root mean square error (RMSE) between the shape model and the scaled smoothed WDRVI data.
+
+RMSE ¼ u u v tffiX ffiXffiffieffiffiffiffiðffiffiffifffiffiðffiffixffiffiÞffiffi-ffiffiffiffigffiffiffiðffiffixffiffiÞffiffiÞffiffi2ffiffi
+
+ð14Þ
+
+S0
+
+gðxÞ ¼ yscale Â hðxscale Â ðx-xshiftÞÞ
+
+ð15Þ
+
+The function f(x) is the shape model, h(x) refers to the smoothed WDRVI data and g(x) is transformed from the smoothed WDRVI data for a given site or year, where x is the APTT value; xscale and xshift are
+
+Table 4 Accuracy assessment of the estimated phenological date and period against the groundbased observations by calculating root mean square error (RMSE) and correlation coefficient (R) for corn.
+
+Stage/period
+
+Management
+
+RMSE(days)
+
+R
+
+na
+
+V1 V6 R1 R2 R3 R4 R5 R6 V1­R1 R1­R6 V1­R6
+
+ICM
+
+3.2
+
+IMS
+
+2.2
+
+RMS
+
+5.6
+
+ICM + IMS + RMS
+
+3.6
+
+ICM
+
+1.8
+
+IMS
+
+1.6
+
+RMS
+
+3.2
+
+ICM + IMS + RMS
+
+2.2
+
+ICM
+
+2.1
+
+IMS
+
+2.4
+
+RMS
+
+2.0
+
+ICM + IMS + RMS
+
+2.2
+
+ICM
+
+1.3
+
+IMS
+
+2.1
+
+RMS
+
+2.7
+
+ICM + IMS + RMS
+
+1.9
+
+ICM
+
+1.9
+
+IMS
+
+2.4
+
+RMS
+
+3.2
+
+ICM + IMS + RMS
+
+2.4
+
+ICM
+
+2.5
+
+IMS
+
+2.6
+
+RMS
+
+4.7
+
+ICM + IMS + RMS
+
+3.2
+
+ICM
+
+3.6
+
+IMS
+
+4.7
+
+RMS
+
+4.7
+
+ICM + IMS + RMS
+
+4.3
+
+ICM
+
+3.2
+
+IMS
+
+4.7
+
+RMS
+
+4.3
+
+ICM + IMS + RMS
+
+4.0
+
+ICM
+
+3.0
+
+IMS
+
+3.7
+
+RMS
+
+5.9
+
+ICM + IMS + RMS
+
+4.0
+
+ICM
+
+3.8
+
+IMS
+
+5.7
+
+RMS
+
+3.8
+
+ICM + IMS + RMS
+
+4.6
+
+ICM
+
+3.4
+
+IMS
+
+5.1
+
+RMS
+
+6.5
+
+ICM + IMS + RMS
+
+4.8
+
+0.92
+
+9b
+
+0.98
+
+6
+
+0.80
+
+4
+
+0.92
+
+19
+
+0.95
+
+10b
+
+0.97
+
+7
+
+0.76
+
+5
+
+0.95
+
+22
+
+0.95
+
+10b
+
+0.98
+
+7
+
+0.76
+
+5
+
+0.95
+
+22
+
+0.95
+
+10b
+
+0.98
+
+7
+
+0.21
+
+5
+
+0.95
+
+22
+
+0.94
+
+10b
+
+0.97
+
+7
+
+0.45
+
+5
+
+0.94
+
+22
+
+0.90
+
+10b
+
+0.96
+
+7
+
+0.66
+
+5
+
+0.90
+
+22
+
+0.89
+
+10b
+
+0.95
+
+7
+
+0.36
+
+5
+
+0.89
+
+22
+
+0.86
+
+10 b
+
+0.92
+
+5
+
+0.83
+
+5
+
+0.86
+
+20
+
+0.56
+
+9b
+
+0.75
+
+6
+
+0.64
+
+4
+
+0.56
+
+19
+
+0.83
+
+9b
+
+0.64
+
+5
+
+0.89
+
+4
+
+0.83
+
+18
+
+0.81
+
+8b
+
+0.74
+
+5
+
+0.24
+
+4
+
+0.81
+
+17
+
+a n is the number of the comparison data. b Includes the 7 pixels used for making the shape model (IMS 2003, 2005­2006, 2008,
+2010­2012).
+
+the scaling and shifting parameters as presented by Sakamoto et al. (2010).
+4.6. Estimating phenology in calendar date from photo-thermal time
+We assume that the predefined APTT was the required APTT for the corresponding transition date among phenological stages. As a result, calendar dates for specific phenology stages were calculated from the corresponding APTT using linear interpolation. For example, as shown in Fig. 3, the needed APTT of V1 (-29.0) occurs between the DOY 129 and DOY 137, in which the APTT values are -40.3 and, -27.3 respectively. Based on this information, the calendar DOY of V1 is calculated to be 136.0 using linear interpolation.
+5. Result and discussion
+5.1. Comparison with TSF method
+As shown in Fig. 2, the fitting errors were small for both crops (R2 = 0.98 for corn and R2 = 0.99 for soybeans). In addition, the summary of the optimum scaling parameters (Table 3) shows that both mean values and the standard deviations of xscale and xshift obtained in this study were lower than those reported in the study by Sakamoto et al. (2010). The mean value of xshift in this study was much lower because of the preliminary adjustment for detecting the onset points where APTT was set zero. The narrower range and variance of xscale in this study indicates that the introduction of temperature and photoperiod reduce the differences among the WDRVI time-series curves of different years for a given crop.
+Using APTT instead of calendar time reduced the difference in time for the phenological stages of corn and soybeans across different location and years. The growth rate of corn increases with higher temperatures when below the maximum allowable temperature, which was
+
+Table 5 Accuracy assessment of the estimated phenological date and period against the groundbased observation data by calculating RMSE and R for soybean.
+
+Stage/period
+
+Management
+
+RMSE (days)
+
+R
+
+na
+
+V1 R1 R2 R3 R4 R5 R6 R7 R1-R7 V1-R7
+
+IMS
+
+3.5
+
+RMS
+
+3.8
+
+IMS + RMS
+
+3.7
+
+IMS
+
+4.1
+
+RMS
+
+4.9
+
+IMS + RMS
+
+4.6
+
+IMS
+
+3.9
+
+RMS
+
+5.4
+
+IMS + RMS
+
+4.9
+
+IMS
+
+1.7
+
+RMS
+
+4.4
+
+IMS + RMS
+
+3.6
+
+IMS
+
+0.9
+
+RMS
+
+2.3
+
+IMS + RMS
+
+1.9
+
+IMS
+
+1.9
+
+RMS
+
+3.3
+
+IMS + RMS
+
+2.9
+
+IMS
+
+2.7
+
+RMS
+
+3.1
+
+IMS + RMS
+
+2.9
+
+IMS
+
+3.2
+
+RMS
+
+4.1
+
+IMS + RMS
+
+3.7
+
+IMS
+
+5.8
+
+RMS
+
+7.1
+
+IMS + RMS
+
+6.6
+
+IMS
+
+1.7
+
+RMS
+
+3.6
+
+IMS + RMS
+
+2.9
+
+­
+
+3b
+
+­
+
+5
+
+0.86
+
+8b
+
+­
+
+3b
+
+­
+
+5
+
+0.86
+
+8b
+
+­
+
+3b
+
+­
+
+5
+
+0.85
+
+8b
+
+­
+
+3b
+
+­
+
+5
+
+0.94
+
+8b
+
+­
+
+3b
+
+­
+
+5
+
+0.98
+
+8b
+
+­
+
+3b
+
+­
+
+5
+
+0.96
+
+8b
+
+­
+
+3b
+
+­
+
+5
+
+0.90
+
+8b
+
+­
+
+3b
+
+­
+
+4
+
+0.75
+
+7b
+
+­
+
+3b
+
+­
+
+4
+
+0.69
+
+7b
+
+­
+
+3b
+
+­
+
+4
+
+0.98
+
+7b
+
+a n is the number of the comparison data. b Includes the 3 pixels used for making the shape model (IMS 2004, 2006, 2008).
+
+244
+
+L. Zeng et al. / Remote Sensing of Environment 181 (2016) 237­250
+
+Fig. 5. Comparison of phenological dates of corn in three sites (a: ICM, b: IMS, c: RMS) between ground-based observation data and MODIS-derived estimation.
+
+incorporated into this method and reduced some of differences in phenological stages estimated using other methods (e.g., Sakamoto et al., 2010). Those temperature and photoperiod functions (Eqs. (8), (9)) also describe the growth rate of soybeans responding to temperature and photoperiod, respectively. WRDVI in this study was observed at a regular eight-day interval because of temporal compositing that had to be considered in this study. If APTT was used on the X axis, less calendar time would be needed to achieve a specific phenological stage as the growth rate increased, while the APTT at every calendar time unit would increase and the difference of APTT would be decreased. Similarly, when growth rate decreased, more calendar time would be needed for reach a specific phenological stage, while the APTT at every calendar time unit would decrease. Accordingly, through the introduction of APTT, less difference of APTT for each phenological period and more similar shape of WDRVI time-series curves from different years and different location would be expected.
+For example, according to the ground-based green LAI measurements for corn from 2001 to 2005 (Suyker & Verma, 2009), the senescence of corn in 2003 at the RMS site was earlier and the reproductive stage was shorter than normal because of drought conditions with relatively higher temperatures (Sakamoto et al., 2010). While in 2009, a longer growth period was observed due to relative low temperatures (USDA, 2009). In Fig. 4a, the calendar time for the reproductive stage was much longer in 2009 than in 2003 even though the vegetation stage for both years was of similar length. With temperature taken into consideration in this study, xscale and xshift (1.01, 6.76 for 2003 and 1.09, 1.42 for 2009, respectively) fitted to the shape model, the required APTT of corn for both the vegetation and the reproductive stage was almost the same for both years (Fig. 4b). In contrast, the scaling and shifting of the whole time-series WDRVI curve under calendar
+
+time (Fig. 4a) introduced larger errors in phenological date estimation during years when abnormal environmental conditions and/or late/ early planting times occur.
+5.2. Pixel-based verification with ground-based observation data
+Overall, the performance for estimating all individual targeted growing season stages was relatively high with the average RMSE in three/ two sites ranging from 1.9 to 4.3 for corn (ICM + IMS + RMS) (Table 4) and from 1.9 to 4.9 for soybeans (IMS+RMS) (Table 5). The RMSE of the estimated dates at individual sites were less than 8 days for both corn and soybeans and the average RMSE across the three sites for all growth stages of corn and soybeans were 3.0 and 3.5 days, respectively. There was no distinct systematic error (earlier or later) in the estimated phenological dates for all growth stages (Figs. 5, 6 and 7). By taking the temperature and photoperiod into consideration, the estimation accuracy was improved when compared to the results from the original TSF method developed by Sakamoto et al. (2010), particularly for soybeans. In the Sakamoto et al. (2010) study, the averaged RMSE at the three sites ranged from 1.9 to 14.5 days for corn and soybeans. In comparison, the RMSE values in this study ranged from 1.9 to 4.9 days in this study for the same sites. In addition, this method expanded the number of growth stage dates that could be estimated, which included the blooming (R1) and pod lengthen (R3) stages of soybeans and V6 and Milk (R3) stages of corn.
+Similar to the results of Sakamoto's study (2010), the error of the estimated growing stages was higher for both corn and soybeans at the beginning and end of the growing season (V1 and R6/R7) than the phenological stages during the mid-growing season (Tables 4 and 5). One of the primary reasons for this difference is the changes of the local VI
+
+Fig. 6. Comparison of phenological dates of soybeans in two sites (a: IMS, b: RMS) between ground-based observation data and MODIS-derived estimation.
+
+L. Zeng et al. / Remote Sensing of Environment 181 (2016) 237­250
+
+245
+
+Fig. 7. Comparison of phenological periods (a: corn, b: soybean) between ground-based observation data and MODIS-derived estimation.
+
+profile around the maximum point is easier to detect than other stages nearer the tails of the VI time series profile near the beginning and end of the growing season (Sakamoto et al., 2010). As a result, higher estimation accuracy was obtained for the growth stages at or near the peak of growing season (R1 of corn, R5, R6 of soybean; Tables 4 and 5). Secondly, the WDRVI curve reflects only physical changes of vegetation, whereas some reproductive stages are not associated with such changes (e.g., rapid increase/decrease or peak point) and are not directly represented in the time-series WDRVI curve (e.g., R1 and R2 of soybean), which results in larger estimation errors. The lowest estimation accuracies for corn were the V1, R6 and R7 stages. As for soybeans, the largest estimation errors were found for the three soybean stages during the reproductive stage: blooming (R1), full blooming (R2) and physical maturity (R7). As a result, the estimation accuracy for reproductive growth length (R1-R7) was also low for soybeans (Table 3), though the estimation accuracy of the whole growing season (V1-R7) was higher, as the xscale and xshift parameters were obtained from each growing curve to stretch the smoothed WDRVI curve to approximate to the shape model. In addition, water stress is an important factor that can affect the phenology and yield of both corn and soybeans significantly that was not included in this method. Estimation errors of
+
+growing stages were higher for the non-irrigated site than the irrigated sites for both corn and soybeans (Tables 4 and 5). Similar to the result of Sakamoto et al. (2010), less variance of both xscale and xshift was expected for the irrigated sites given that the time-series data from those sites were used to develop the shape models. As for water stress, the inter-annual variability in seasonal WDRVI curves was typically greater for the rainfed site than irrigated sites, which results in both greater variance of xscale and xshift.
+5.3. Region-based verification in eastern Nebraska and Iowa
+There were some differences when matching the NASS-CPR data and MODIS-derived observations for corn in Nebraska and Iowa. According to the comparison with MODIS-derived model which was calibrated by the three field sites in Nebraska, the observations reported by NASS-CPR data are one stage later in Iowa than those in Nebraska from R1 to R5 of corn (Table 5). Similar to Sakamoto et al. (2010) study, the dates of R1, R4 and R5 stages derived from MODIS data were closest to those when 50% of corn reaches the silk, dough, and dent stages reported in NASS-CPRs in eastern Nebraska in 2002. While, the dates of R2, R4 and R5 stage derived from MODIS data
+
+Table 6 The general crop development stages in the NASS-CPRs matched with a specific agronomic stage estimated form WDRVI data in eastern Nebraska and Iowa, respectively.
+
+NASS-CPR
+
+MODIS-derived (Nebraska) MODIS-derived (Iowa) NASS-CPR
+
+MODIS-derived (Nebraska) MODIS-derived (Iowa)
+
+Corn emerged
+
+V1
+
+V1
+
+Soybeans emerged
+
+V1
+
+V1
+
+Corn silked
+
+R1
+
+R2
+
+Soybeans blooming
+
+R3
+
+R3
+
+Corn in or past milk stage
+
+R4
+
+Soybeans setting pods
+
+R5
+
+R5
+
+Corn in or past dough stage
+
+R4
+
+R5
+
+Soybeans dropping leaves R7
+
+R7
+
+Corn in or past dent stage
+
+R5
+
+Corn mature (safe from frost) R6
+
+R6
+
+Table 7 Accuracy assessment of the estimated phenological date against the NASS-CPR statistic data for corn and soybean on eastern Nebraska 2002 and Iowa from 2009 to 2012.
+
+NE
+
+Corn
+
+RMSE
+
+R
+
+Soybean
+
+RMSE
+
+R
+
+(ASD3,6,9, in 2002)
+
+Emerged-V1
+
+2.1
+
+Emerged-V1
+
+1.8
+
+Silk-R1
+
+1.8
+
+Blooming-R3
+
+2.7
+
+Dough-R4
+
+2.8
+
+SettingPod-R5
+
+2.9
+
+Dent-R5
+
+2.7
+
+Dropingleaves-R7
+
+1.7
+
+Mature-R6
+
+2.9
+
+Iowa
+
+Corn
+
+RMSE
+
+Soybean
+
+RMSE
+
+(ASD 1-9, from 2009 to 2012)
+
+Emerged-V1
+
+3.9
+
+0.64
+
+Emerged-V1
+
+3.7
+
+0.32
+
+Silk-R2
+
+3.0
+
+0.91
+
+Blooming-R3
+
+3.9
+
+0.63
+
+Milk-R4
+
+2.6
+
+0.89
+
+SettingPod-R5
+
+3.2
+
+0.55
+
+Dought-R5
+
+3.3
+
+0.94
+
+Dropingleaves-R7
+
+3.6
+
+0.75
+
+Mature-R6
+
+3.9
+
+0.93
+
+246
+
+L. Zeng et al. / Remote Sensing of Environment 181 (2016) 237­250
+
+Fig. 8. Comparison of phenological dates (a-e: corn, f-j: soybean) between statistical data of NASS-CPR and MODIS-derived estimation in the states of Iowa from 2009 to 2012 and eastern Nebraska in 2002 (NE-ASD 3,6,9).
+
+L. Zeng et al. / Remote Sensing of Environment 181 (2016) 237­250
+
+247
+
+Fig. 9. Spatial patterns of key phenological dates (DOY) of corn in eastern Nebraska, 2002.
+
+Fig. 10. Spatial patterns of key phenological dates (DOY) of corn in Iowa, from 2009 to 2012.
+
+were closest to the dates when 50% of corn reaches silk, milk and dough stages in Iowa from 2009 to 2012 (Table 6).
+Region-based verification was conducted in eastern Nebraska for 2002 and the state of Iowa from 2009 to 2012. The results show that the median ASD-level date estimates of the key phenological dates for corn and soybeans were in close agreement with the NASS-CPR in both eastern Nebraska and Iowa (Table 7 and Fig. 8). Overall, the RMSE values of the estimated growth stages of both corn and soybeans were within 4 days of the observed dates and the estimation errors were less than 10 days for all phenological stages with the exception of the V1 stage for both corn and soybeans. In Sakamoto et al. (2010) study, the V2.5 stage of corn was used to correspond to emergence in NASS-CPR data and a bias of about 10 days later than observed dates was found. While in this study, the V1 stage was used instead of the V2.5 stage because it occurred before V2.5 and was closer to the time of emergence stage in NASS-CPR data. However, there is still slight systematic bias in estimated V1 stage (~ 4 days later), compared to the emergence stage recorded in NASS-CPR data, for both corn and soybeans. The reason for this bias is that different phenological staging systems were used to describe the phenology at the CSP field sites compared to the data collected for the NASS-CPRs. In the case of emergence, NASS reports the date for this stage when plants have broken the soil's surface, whereas the V1 stage for corn and soybeans represents early-stage, post-emergence leaf development (Sakamoto et al., 2010).
+
+As a result, some lag between the time when MODIS-derived V1 and NASS-CPR-reported emergency occurred would be expected. So the estimated phenological dates of V1 was subtracted 4 days for both corn and soybeans when calculating RMSE.
+The estimation accuracy in eastern Nebraska was slightly higher than that in Iowa for most of the stages of both corn and soybeans (Table 7). A slightly higher accuracy might be expected in eastern Nebraska given the fact that the calibration data used to develop the models was from field sites in this area. There could be some slight difference in environment factors (inter-annual climatic conditions and soils) and cultivars between Nebraska and Iowa. In addition, there might be some difference in the measuring criterion or sampling method of fields for the NASS-CPRs collected by USDA staff in Nebraska and Iowa independently.
+The region-based MODIS-derived estimations using the method presented in this paper illustrate the spatial-temporal patterns of corn and soybean phenology in both eastern Nebraska and Iowa (Figs. 9 to 12). The spatial distributions of MODIS-derived phenological stages of corn and soybeans across the three ASDs in eastern Nebraska for 2002 are shown in Figs. 9 and 11 with earlier planting times in the southern district and becoming progressively later in a northward direction. The earliest dates (at or near DOY 135) for the V1 stage of corn (highlighted in green) occurred in the south and in the northernmost region occurring at or near DOY 165 (highlighted in red). This north-south trend in later
+
+248
+
+L. Zeng et al. / Remote Sensing of Environment 181 (2016) 237­250
+
+Fig. 11. Spatial patterns of key phenological dates (DOY) of soybeans in eastern Nebraska, 2002.
+
+to earlier dates for the early stage vegetation stages across Nebraska is consistent with planting date variations across this region with early planting times occurring in the southern part of the state. There was no obvious north­south planting date gradient occurring in Iowa (Figs. 10 and 12). However, the multi-year MODIS-derived date estimates demonstrate the inter-annual variation of the phenological dates across Iowa. It is shown from Figs. 10 and 12 that the growing season of both corn and soybean started earlier in 2012 across most of the state than the other years in the study period. The earlier start of the 2012 growing season resulted from abnormally warm late-winter and early-spring temperatures that allowed earlier planting times and shifted the crop growth stages earlier dates across Iowa that year (USDA, 2012). In contrast, the 2009 growing season experienced a notable delay because of abnormally wet, cool weather in spring, summer, and fall resulting in major crop planting, maturation, and harvesting delays across Iowa and other parts of the Midwest (USDA, 2009). This is
+
+reflected in the MODIS-based phenology results with a longer than normal growing season for corn and later timing of the reproductive stages (Fig. 10). These regional-scale results show that the MODIS-based phenology estimation approach developed in this study can be extended over a larger geographic area with a reasonable estimation accuracy that is consistent with USDA crop conditions reports.
+6. Conclusion
+This study presented a hybrid remote sensing-based crop phenology estimation method for corn and soybeans that incorporated the simulation concept of crop growth models with the shape-model fitting concept of the TSF method developed by Sakamoto et al. (2010). All critical vegetative stages (V1 and V6 for corn and V1 for soybean) and reproductive stages (R1­R6 for corn and R1­R7 for soybeans) were estimated from time-series MODIS WDRVI data for both crops (i.e., corn
+
+Fig. 12. Spatial patterns of key phenological dates (DOY) of soybeans in Iowa from 2009 to 2012.
+
+L. Zeng et al. / Remote Sensing of Environment 181 (2016) 237­250
+
+249
+
+and soybean) using this hybrid modeling approach. By taking the environmental factors of temperature and photoperiod into consideration, the inter-annual variation of estimation accuracy was minimized. Compared to the original TSF method developed by Sakamoto et al. (2010), this hybrid model had a higher level of agreement between the estimated and observed phenological dates for corn and soybeans at both the field and regional scales. RMSE values ranged from 1.9 to 4.3 days at the field scale and from 1.8 to 2.9 days at the regional scale for corn, and from 1.9 to 4.9 days at the field scale and from 1.7 to 2.9 days at the regional scale for soybeans. The error rate of regional-scale phenology estimation in Iowa (RMSE ranged from 2.6 to 3.9 days for corn and from 3.2 to 3.9 days for soybean) was slightly higher than that in eastern Nebraska. Slightly higher estimation accuracies in Nebraska could be attributed to the fact that the calibration data for the shape models were from this area. However, the estimation accuracy in Iowa was quite acceptable as the crop phenology date estimates of both crops were typically within 4 days or less compared to the reported date.
+The phenology estimate method presented in this paper shows great potential to detect critical phenology stages of both corn and soybeans at a regional scale. A wide range of applications can benefit from this study, for example, yield prediction, as crop yield is expected to be closely related to the conditions during one or several critical phenology stages (Funk & Budde, 2009; Sakamoto et al., 2013).
+This method is potential to be extended to phenological stage estimation for other crop types (e.g., wheat and rice). Future work is also needed to take precipitation and account water stress into consider to further improve the phenological date estimation from remote sensing-based time-series VI data. Water stress might accelerate or delay some phenological stage, but a challenge still remains to establish the quantitative relationship between water stress and phenology that can be incorporated into these new remote sensing-based phenology estimation methods.
+Acknowledgements
+We are grateful to anonymous reviewers and editor for their valuable comments and suggestions, which have greatly help us to improve the original version of the manuscript. This work was supported by NSFC (National Natural Science Foundation) and the open foundation from the Key Laboratory for National Geography State Monitoring (National Administration of Surveying, Mapping and Geoinformation).
+References
+Abendroth, L. J., Elmore, R. W., Boyer, M. J., & Marlay, S. K. (2011). Corn growth and development. Iowa State University, University Extension.
+Asseng, S., & Turner, N. C. (2005). Modelling genotype environment management interactions to improve yield, water use efficiency and grain protein in wheat. In J. H. J. Spiertz, P. C. Struik, & H. H. van Laar (Eds.), Scale and complexity in plant systems research: Gene­plant­crop relations (pp. 93­104). Springer.
+Balzter, H., Gerard, F., George, C., Weedon, G., Grey, W., Combal, B., ... Los, S. (2007). Coupling of vegetation growing season anomalies and fire activity with hemispheric and regional-scale climate patterns in central and east Siberia. Journal of Climate, 20(15), 3713­3729.
+Bannayan, M., Hoogenboom, G., & Crout, N. M. J. (2004). Photothermal impact on maize performance: A simulation approach. Ecological Modelling, 180(2­3), 277­290.
+Bastidas, A. M. (2005). Soybean growth, development, and yeild: The effect of planting date. University of Nebraska-Lincoln.
+Bhatia, A. K. (2014). Crop Growth Simulation Modeling. In S. K. K. N. Basu (Ed.), Modelling and simulation of diffusive processes (pp. 315­332). Springer International Publishing.
+Bolton, D. K., & Friedl, M. A. (2013). Forecasting crop yield using remotely sensed vegetation indices and crop phenology metrics. Agricultural and Forest Meteorology, 173, 74­84.
+Brown, J. F., Wardlow, B. D., Tadesse, T., Hayes, M. J., & Reed, B. C. (2008). The Vegetation Drought Response Index (VegDRI): A new integrated approach for monitoring drought stress in vegetation. GIScience & Remote Sensing, 45(1), 16­46.
+Brown, M. E., de Beurs, K. M., & Marshall, M. (2012). Global phenological response to climate change in crop areas using satellite remote sensing of vegetation, humidity and temperature over 26 years. Remote Sensing of Environment, 126, 174­183.
+Chakraborty, M., & Das, S. (2012). Determination of signal to noise ratio of electrocardiograms filtered by band pass and Savitzky­Golay filters. Procedia Technology, 4, 830­833.
+
+Chen, J., Jönsson, P., Tamura, M., Gu, Z., Matsushita, B., & Eklundh, L. (2004). A simple method for reconstructing a high-quality NDVI time-series data set based on the Savitzky­Golay filter. Remote Sensing of Environment, 91(3­4), 332­344.
+Cleland, E. E., Chuine, I., Menzel, A., Mooney, H. A., & Schwartz, M. D. (2007). Shifting plant phenology in response to global change. Trends in Ecology & Evolution, 22(7), 357­365.
+Cong, N., Wang, T., Nan, H., Ma, Y., Wang, X., Myneni, R. B., & Piao, S. (2013). Changes in satellite-derived spring vegetation green-up date and its linkage to climate in China from 1982 to 2010: A multimethod analysis. Global Change Biology, 19(3), 881­891.
+Cregan, P. B., & Hartwig, E. E. (1984). Characterization of flowering response to photoperiod in diverse soybean genotypes.
+Cutforth, & Shaykewich (1990). A temperature response function for corn development. Agricultural and Forest Meteorology, 50(3), 159­171.
+Deen, W., Hunt, L. A., & Swanton, C. J. (1998). Photothermal time describes common ragweed (Ambrosia artemisiifolia L.) phenological development and growth. Weed Science, 46(5), 561­568.
+Delbart, N., Le Toan, T., Kergoat, L., & Fedotova, V. (2006). Remote sensing of spring phenology in boreal regions: A free of snow-effect method using NOAA-AVHRR and SPOT-VGT data (1982­2004). Remote Sensing of Environment, 101(1), 52­62.
+Desclaux, D., & Roumet, P. (1996). Impact of drought stress on the phenology of two soybean (Glycine max L. Merr) cultivars. Field Crops Research, 46(1­3), 61­70.
+Diepen, C. V., Wolf, J., Keulen, H. V., & Rappoldt, C. (1989). WOFOST: A simulation model of crop production. Soil Use and Management, 5(1), 16­24.
+Ellis, R. H., Roberts, E. H., & Summerfield, R. J. (1988). Photothermal time for flowering in faba bean (Vicia faba) and the analysis of potential vernalization responses. Annals of Botany, 61(1), 73­82.
+Fehr, W. R., Caviness, C. E., Burmood, D. T., Pennington, J. S., & Alexander, J. C. (1971). Stage of development descriptions for soybeans, Glycine max (L.) Merrill1.
+Fischer, A. (1994). A model for the seasonal variations of vegetation indices in coarse resolution data and its inversion to extract crop parameters. Remote Sensing of Environment, 48(2), 220­230.
+Fleisher, D. H., Shillito, R. M., Timlin, D. J., Kim, S. H., & Reddy, V. R. (2006). Approaches to modeling potato leaf appearance rate. Agronomy Journal, 98(3), 522­528.
+Funk, C., & Budde, M. E. (2009). Phenologically-tuned MODIS NDVI-based production anomaly estimates for Zimbabwe. Remote Sensing of Environment, 113(1), 115­125.
+Galford, G. L., Mustard, J. F., Melillo, J., Gendrin, A., Cerri, C. C., & Cerri, C. E. P. (2008). Wavelet analysis of MODIS time series to detect expansion and intensification of row-crop agriculture in Brazil. Remote Sensing of Environment, 112(2), 576­587.
+Gitelson, A. A. (2004). Wide dynamic range vegetation index for remote quantification of biophysical characteristics of vegetation. Journal of Plant Physiology, 161(2), 165­173.
+Gitelson, A. A., Wardlow, B. D., Keydan, G. P., & Leavitt, B. (2007). An evaluation of MODIS 250-m data for green LAI estimation in crops. Geophysical Research Letters, 34(20), L20403.
+Hesketh, J. D., Myhre, D. L., & Willey, C. R. (1973). Temperature control of time intervals between vegetative and reproductive events in soybeans.
+Kadhem, F. A., Specht, J. E., & Williams, J. H. (1985). Soybean irrigation serially timed during stages Rl to R6. I. Agronomic responses.
+Keisling, T. C. (1982). Calculation of the length of day. Kropff, M. J., & van Laar, H. H. (1993). Modelling crop-weed interactions. International Rice
+Research Institute. Lloyd, D. (1990). A phenological classification of terrestrial vegetation cover using short-
+wave vegetation index imagery. International Journal of Remote Sensing, 11(12), 2269­2279. Masle, J., Doussinault, G., Farquhar, G. D., & Sun, B. (1989). Foliar stage in wheat correlates better to photothermal time than to thermal time. Plant Cell & Environment, 12(3), 235­247. Meckel, L., Egli, D. B., Phillips, R. E., Radcliffe, D., & Leggett, J. E. (1984). Effect of moisture stress on seed growth in soybeans. 1. Ozdogan, M., & Gutman, G. (2008). A new methodology to map irrigated areas using multi-temporal MODIS and ancillary data: An application example in the continental US. Remote Sensing of Environment, 112(9), 3520­3537. Pedersen, P. (2009). Soybean growth and development. Iowa State University, University Extension. Peña-Barragán, J. M., Ngugi, M. K., Plant, R. E., & Six, J. (2011). Object-based crop identification using multiple vegetation indices, textural features and crop phenology. Remote Sensing of Environment, 115(6), 1301­1316. Peng, Y., Gitelson, A. A., & Sakamoto, T. (2013). Remote estimation of gross primary productivity in crops using MODIS 250 m data. Remote Sensing of Environment, 128, 186­196. Pettorelli, N., Vik, J. O., Mysterud, A., Gaillard, J., Tucker, C. J., & Stenseth, N. C. (2005). Using the satellite-derived NDVI to assess ecological responses to environmental change. Trends in Ecology & Evolution, 20(9), 503­510. Reed, B. C., Brown, J. F., Vanderzee, D., Loveland, T. R., Merchant, J. W., & Ohlen, D. O. (1994). Measuring phenological variability from satellite imagery. Journal of Vegetation Science, 5(5), 703­714. Rouse, J. W., Jr., Haas, R. H., Schell, J. A., & Deering, D. W. (1974). Monitoring vegetation systems in the Great Plains with ERTS. NASA Special Publication, 351309-317. Sakamoto, T., Gitelson, A. A., & Arkebauer, T. J. (2013). MODIS-based corn grain yield estimation model incorporating crop phenology information. Remote Sensing of Environment, 131, 215­231. Sakamoto, T., Wardlow, B. D., Gitelson, A. A., Verma, S. B., Suyker, A. E., & Arkebauer, T. J. (2010). A two-step filtering approach for detecting maize and soybean phenology with time-series MODIS data. Remote Sensing of Environment, 114(10), 2146­2159.
+
+250
+
+L. Zeng et al. / Remote Sensing of Environment 181 (2016) 237­250
+
+Sakamoto, T., Yokozawa, M., Toritani, H., Shibayama, M., Ishitsuka, N., & Ohno, H. (2005). A crop phenology detection method using time-series MODIS data. Remote Sensing of Environment, 96(3), 366­374.
+Schr der, U., & Sondgerath, D. (1996). The concept of biological time for computing the switching points of a growth model for winter wheat. Ecological Modelling, 88(1), 1­8.
+Schwartz, M. D. (1998). Green-wave phenology. Nature, 394839-840. Setiyono, T. D., Weiss, A., Specht, J., Bastidas, A. M., Cassman, K. G., & Dobermann, A.
+(2007). Understanding and modeling the effect of temperature and daylength on soybean phenology under high-yield conditions. Field Crops Research, 100(2­3), 257­271. Soltani, A., Maddah, V., & Sinclair, T. R. (2013). SSM-Wheat: A simulation model for wheat development, growth and yield. International Journal of Plant Production, 7(4), 711­740. Spitters, C. J. T., van Keulen, H., & van Kraalingen, D. W. G. (1989). A simple and universal crop growth simulator: SUCROS87. In R. Rabbinge, S. A. Ward, & H. H. van Laar (Eds.), Simulation and systems management in crop protection. Wageningen: Centre for Agricultural Publishing and Documentation. Streck, N. A., Lago, I., Gabriel, L. F., & Samboranha, F. K. (2008). Simulating maize phenology as a function of air temperature with a linear and a nonlinear model. Pesquisa Agropecuária Brasileira, 43(4), 449­455. Streck, N. A., Paula, F. L. M. D., Bisognin, D. A., Heldwein, A. B., & Dellai, J. (2007). Simulating the development of field grown potato (Solanum tuberosum L.). Agricultural & Forest Meteorology, 142(1), 1­11. Summerfield, R. J., & Wilcox, J. R. (1978). Effects of photoperiod and air temperature on growth and yield of economic legumes. In R. J. Summerfield, & A. H. Bunting (Eds.), Advances in legume sciences (pp. 17­36). Kew, England: Royal Botanic Gardens. Suyker, A. E., & Verma, S. B. (2009). Evapotranspiration of irrigated and rainfed maize­ soybean cropping systems. Agricultural and Forest Meteorology, 149(3­4), 443­452. Tateishi, R., & Ebata, M. (2004). Analysis of phenological change patterns using 1982­2000 Advanced Very High Resolution Radiometer (AVHRR) data. International Journal of Remote Sensing, 25(12), 2287­2300. Tollenaar, M., Daynard, T. B., & Hunter, R. B. (1979). Effect of temperature on rate of leaf appearance and flowering Date in maize. USDA (2009). Crop Production 2009 Summary. Available at http://www.sdcorn.org/ userfiles/files/usda%20nass%20crop%20production%20summary%202009.pdf (last access date: Aug.3, 2014) USDA (2012). Crop production 2012 summary. Available at http://usda01.library.cornell. edu/usda/nass/CropProdSu/2010s/2013/CropProdSu-01-11-2013.pdf (last access date: Sep.8, 2014)
+
+Viña, A., Gitelson, A. A., Rundquist, D. C., Keydan, G., Leavitt, B., & Schepers, J. (2004). Monitoring maize (Zea mays L.) phenology with remote sensing.
+Wang, C., Fritschi, F. B., Stacey, G., & Yang, Z. (2011). Phenology-based assessment of perennial energy crops in North American tallgrass prairie. Annals of the Association of American Geographers, 101(4), 742­751.
+Wang, E., & Engel, T. (1998). Simulation of phenological development of wheat crops. Agricultural Systems, 58(1), 1­24.
+Wardlow, B. D., & Egbert, S. L. (2008). Large-area crop mapping using time-series MODIS 250 m NDVI data: An assessment for the U.S. Central Great Plains. Remote Sensing of Environment, 112(3), 1096­1116.
+Wardlow, B. D., Egbert, S. L., & Kastens, J. H. (2007). Analysis of time-series MODIS 250 m vegetation index data for crop classification in the U.S. Central Great Plains. Remote Sensing of Environment, 108(3), 290­310.
+Wardlow, B. D., Kastens, J. H., & Egbert, S. L. (2006). Using USDA crop progress data for the evaluation of greenup onset date calculated from MODIS 250-meter data. Photogrammetric Engineering and Remote Sensing, 11(72), 1225­1234.
+White, M. A., & Nemani, R. R. (2006). Real-time monitoring and short-term forecasting of land surface phenology. Remote Sensing of Environment, 104(1), 43­49.
+Xu, H., Twine, T., & Yang, X. (2014). Evaluating remotely sensed phenological metrics in a dynamic ecosystem model. Remote Sensing, 6(6), 4660­4686.
+Yang, H. S., Dobermann, A., Lindquist, J. L., Walters, D. T., Arkebauer, T. J., & Cassman, K. G. (2004). Hybrid-maize--A maize simulation model that combines two crop modeling approaches. Field Crops Research, 87(2­3), 131­154.
+Yin, X., Kropff, M. J., Mclaren, G., & Visperas, R. M. (1995). A nonlinear model for crop development as a function of temperature. Agricultural and Forest Meteorology, 77(1­2), 1­16.
+Zeng, L., Wardlow, B. D., Tadesse, T., Shan, J., Hayes, M. J., Li, D., & Xiang, D. (2015). Estimation of daily air temperature based on MODIS land surface temperature products over the corn belt in the US. Remote Sensing, 7(1), 951.
+Zhang, J., Feng, L., & Yao, F. (2014). Improved maize cultivated area estimation over a large scale combining MODIS­EVI time series data and crop phenological information. ISPRS Journal of Photogrammetry and Remote Sensing, 94, 102­113.
+Zhang, M., Zhou, Q., Chen, Z., Liu, J., Zhou, Y., & Cai, Y. C. (2008). Crop discrimination in Northern China with double cropping systems using Fourier analysis of time-series MODIS data. International Journal of Applied Earth Observation and Geoinformation, 10(4), 476­485.
+Zhang, X., Friedl, M. A., Schaaf, C. B., Strahler, A. H., Hodges, J. C. F., Gao, F., ... Huete, A. (2003). Monitoring vegetation phenology using MODIS. Remote Sensing of Environment, 84(3), 471­475.
+
+
