@@ -6,8 +6,8 @@ Current state of the project. Updated after each meaningful work session.
 
 ## Current Status
 
-**Date:** 2026-04-11  
-**Phase:** Task 1–2 pipelines executable; Task 2 rotation **processed-CDL path** complete — notebooks **02–05** run headlessly via `python -m jupyter nbconvert --execute`, artifacts refreshed, interpretation in `context/TASK2_RESULTS.md`.
+**Date:** 2026-04-12  
+**Phase:** Task 1–2 pipelines executable; Task 2 rotation **processed-CDL path** complete — notebooks **01→04** (merged **04** = maps + areal + county), **Bayesian DM** artifacts and interpretation in `context/TASK2_RESULTS.md` §2.7, `TASK2_NAFSI_DATA_CONTRACT.md`, `RISKS.md` (RISK-009).
 
 ## Completed
 
@@ -26,8 +26,8 @@ Current state of the project. Updated after each meaningful work session.
 - [x] `src/` — io, preprocessing, modeling (**rotation_classifier**), evaluation, viz (**rotation_maps**), utils
 - [x] `scripts/` — CLI entry-points per task plus `download_data.py`, `build_interim_data.py`, `process_interim_to_parquet.py`, `build_task2_notebooks.py`
 - [x] `tests/` — rotation metric unit tests (`tests/test_rotation_metrics.py`)
-- [x] `artifacts/` — Task 2 figures under `artifacts/figures/task2/`; NB05 areal CSV/JSON under `artifacts/tables/task4/`; Markov/sensitivity under `artifacts/tables/task2/`
-- [x] **Task 2:** metrics Parquet, classified Parquet, raw + smoothed rotation GeoTIFFs under `data/processed/task2/`
+- [x] `artifacts/` — Task 2 figures under `artifacts/figures/task2/` (incl. **`task2__rotation_dm_*__*.png`**); notebook **04** areal CSV/JSON under `artifacts/tables/task4/`; Markov/sensitivity under `artifacts/tables/task2/`
+- [x] **Task 2:** metrics Parquet (`dm_*` when enabled), classified Parquet, raw + smoothed rotation GeoTIFFs, **DM float GeoTIFFs**, under `data/processed/task2/`
 
 ## In Progress
 

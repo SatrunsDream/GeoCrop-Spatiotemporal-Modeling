@@ -108,7 +108,7 @@ After the repo moved from an **Iowa + Nebraska–only** footprint to the **full 
 | **Interim stack** | `scripts/build_interim_data.py` | **No YAML state list** — reads whatever rasters exist | Prefers `cdl_{year}_cornbelt_5070.tif`, falls back to legacy `cdl_{year}_iowa_nebraska_5070.tif`; concatenates years into `data/interim/cdl/cdl_stack_{y0}_{y1}.nc`. |
 | **Processed Parquet** | `scripts/process_interim_to_parquet.py` | **Interim path (`--source interim`):** inherits extent from the NetCDF stack. **WMS path (`--source wms`):** `configs/task1_ndvi_analysis.yaml` → `study_area.states` (union bbox via `_STATE_BOUNDS_4326` in that script) | Writes `data/processed/cdl/cdl_stack_wide.parquet` + `cdl_stack_spatial_metadata.json` (and NDVI/SMAP wide tables). |
 
-**Task 2** notebooks read **processed CDL** plus `configs/task2_crop_rotation.yaml` (`cdl.year_range`, `study_area.states` for maps and areal-by-state). They do **not** re-download; if you change state lists, **re-run download → build_interim → process** (or WMS process) so the **grid** matches what you label in NB04/NB05.
+**Task 2** notebooks read **processed CDL** plus `configs/task2_crop_rotation.yaml` (`cdl.year_range`, `study_area.states` for maps and areal-by-state). They do **not** re-download; if you change state lists, **re-run download → build_interim → process** (or WMS process) so the **grid** matches what you label in notebook **04** (maps + areal export).
 
 **Wide Parquet convention:** rows indexed by `iy`, `ix`; time-varying bands as columns `w000`, `w001`, … in chronological order; CDL adds `cdl_{year}` columns. Each `*_metadata.json` records CRS, transform, dimensions, and (for NDVI/SMAP) `time_start_day` per week column.
 

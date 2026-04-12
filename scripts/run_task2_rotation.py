@@ -2,7 +2,7 @@
 Task 2 — crop rotation from CDL (NAFSI Track 1).
 
 There is no single long-running CLI here: the analysis is implemented as Jupyter
-notebooks under ``notebooks/task2_crop_rotation/`` (run **01 → 05** in order).
+notebooks under ``notebooks/task2_crop_rotation/`` (run **01 → 04** in order).
 
 **Prerequisites**
   1. Processed CDL: ``data/processed/cdl/cdl_stack_wide.parquet`` +
@@ -32,8 +32,7 @@ def main() -> None:
         "01_cdl_timeseries_loading.ipynb",
         "02_rotation_metrics_computation.ipynb",
         "03_rotation_classification.ipynb",
-        "04_spatial_mapping_rotation.ipynb",
-        "05_areal_statistics_export.ipynb",
+        "04_spatial_maps_and_areal_export.ipynb",
     ):
         print(f"  {nb / name}")
     print("\nConfig:", REPO_ROOT / "configs" / "task2_crop_rotation.yaml")

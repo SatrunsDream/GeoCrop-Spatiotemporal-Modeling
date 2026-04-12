@@ -193,7 +193,7 @@ def plot_rotation_class_map(
         for c in sorted(CLASS_COLORS)
     ]
     patches.append(mpatches.Patch(color=(0.92, 0.92, 0.92), label="No data"))
-    ax.legend(handles=patches, loc="lower left", fontsize=9, framealpha=0.9)
+    ax.legend(handles=patches, loc="upper right", fontsize=9, framealpha=0.9)
     ax.set_title(title, fontsize=13, fontweight="bold")
     ax.set_xlabel("Easting (m)")
     ax.set_ylabel("Northing (m)")

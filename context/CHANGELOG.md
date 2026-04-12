@@ -10,6 +10,8 @@ Milestone and version log for the GeoCrop NAFSI Track 1 submission.
 - `context/TASK2_NAFSI_DATA_CONTRACT.md` — processed CDL/NDVI naming, Task 2 artifact layout, NAFSI rigor checklist (mirrors Task 1 `03_ndvi_phenology_hsgp_bayesian.ipynb` patterns).
 
 ### Changed
+- `context/TASK2_RESULTS.md`, `TASK2_NAFSI_DATA_CONTRACT.md`, `RISKS.md` (RISK-009): document **2026-04-12** re-run artifacts, **posterior P(regular)** map interpretation (§2.7), merged notebook **04**, class-map legend **upper right**, and DM GeoTIFF paths.
+- Task 2: **Dirichlet–Multinomial** Bayesian rotation layer (`src/modeling/rotation_bayesian_dm.py`, YAML `bayesian_dm`) → `dm_*` columns in `rotation_metrics.parquet`, float GeoTIFFs in NB03, maps in merged notebook **04**; former NB04/NB05 merged into `04_spatial_maps_and_areal_export.ipynb` (sources under `_deprecated/`).
 - Task 1: renamed `notebooks/task1_ndvi_timeseries/model.ipynb` to `03_ndvi_phenology_hsgp_bayesian.ipynb` (HSGP / NumPyro Bayesian phenology); cross-references updated in `context/` and Task 2 notebook 01.
 - Task 2 CDL analysis window set to **2015–2024** (10 years) in `configs/task2_crop_rotation.yaml`; Task 2 notebooks, `rotation_maps` default title, and context docs updated.
 - Task 2 notebooks: valid **nbformat** (`execution_count`, cell `id`) for `jupyter nbconvert --execute`; Markov plot uses **matplotlib** only (no **seaborn** import in NB02).

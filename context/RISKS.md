@@ -44,4 +44,9 @@ Known risks, failure modes, and mitigations for the GeoCrop NAFSI Track 1 pipeli
 ### RISK-008 — Task 2 study footprint vs Corn Belt narrative
 - **Risk:** The processed CDL stack’s geographic extent may cover only part of the **13-state** Corn Belt; **map callouts** or narrative that imply a specific subregion (e.g. only Iowa vs Nebraska) can **misread** the footprint.
 - **Severity:** Medium (communication / reviewer trust)
-- **Mitigation:** Report **bbox** from metadata; Notebook **05** assigns regions via **state polygons** (`load_cornbelt_state_boundaries_5070`, YAML state list), not a longitude proxy; tie claims to **actual** footprint (`context/TASK2_RESULTS.md`).
+- **Mitigation:** Report **bbox** from metadata; Notebook **04** assigns regions via **state polygons** (`load_cornbelt_state_boundaries_5070`, YAML state list), not a longitude proxy; tie claims to **actual** footprint (`context/TASK2_RESULTS.md`).
+
+### RISK-009 — Bayesian `dm_p_regular` vs rule-based `rotation_class`
+- **Risk:** Readers equate **posterior P(regular)** with “probability the pixel is class **0** (strict regular rotation)” — the DM layer only reflects **Dirichlet–Multinomial** uncertainty on **corn/soy transition rows**, not Hamming distance, `n_cornsoy` cutoffs, or monoculture logic.
+- **Severity:** Medium (misinterpretation in report text)
+- **Mitigation:** State explicitly in methods that **two** products are exported: **hard 0/1/2** map (NAFSI criterion) and **continuous** `dm_p_regular` (alternation-channel uncertainty); cite `context/TASK2_RESULTS.md` §2.7.

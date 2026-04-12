@@ -33,10 +33,12 @@ From `configs/task2_crop_rotation.yaml`:
 
 - **Figures:** `artifacts/figures/task2/` — all `task2__*.png` maps and diagnostics.
 - **Tables (NB02–03):** `artifacts/tables/task2/` — e.g. `task2__threshold_sensitivity_grid.csv`, **`task2__markov_transition_{counts,probs}.csv`**.
-- **Tables (NB05 areal CSV + JSON):** `artifacts/tables/task4/` — YAML `output.task4_tables_dir` (`task2__areal_stats_by_class__*.csv`, `*__metadata.json`, `task2__areal_stats_by_region__*.csv`). GeoTIFFs are **not** written here; rasters stay under `data/processed/task2/`.
-- **Geospatial / metrics cache:** `data/processed/task2/` — `rotation_metrics.parquet`, `rotation_metrics_classified.parquet`, `rotation_class_map*.tif`.
+- **Tables (Notebook 04 areal CSV + JSON):** `artifacts/tables/task4/` — YAML `output.task4_tables_dir` (`task2__areal_stats_by_class__*.csv`, `*__metadata.json`, `task2__areal_stats_by_region__*.csv`). GeoTIFFs are **not** written here; rasters stay under `data/processed/task2/`.
+- **Geospatial / metrics cache:** `data/processed/task2/` — `rotation_metrics.parquet` (includes **`dm_*`** when `bayesian_dm.enabled`), `rotation_metrics_classified.parquet`, `rotation_class_map*.tif`, **`rotation_dm_p_regular.tif`**, **`rotation_dm_alt_posterior_std.tif`** (float32; written in NB03 when DM columns exist).
 
-**Run bundle:** `artifacts/logs/runs/<id>/run_bundle.json` (Notebook 05) for provenance.
+**Run bundle:** `artifacts/logs/runs/<id>/run_bundle.json` (Notebook **04**, merged maps + areal + county) for provenance — includes paths to DM GeoTIFFs when present.
+
+**Map styling:** rotation **class** map legends are drawn **upper right** (`src/viz/rotation_maps.py` → `plot_rotation_class_map`) to reduce overlap with corner annotations.
 
 ---
 
@@ -48,7 +50,7 @@ Use the **PDF** as the rubric source; automate everything below in notebooks or 
 2. **Data lineage** — Parquet + `cdl_stack_spatial_metadata.json` document CRS, transform, and source NetCDF path from `process_interim_to_parquet.py`.
 3. **Pre-registered rules** — Classification thresholds live in YAML; sensitivity sweep explores the neighborhood without silently changing the primary rule.
 4. **Reproducibility** — Fix `run.seed` in YAML where used; save dated filenames where notebooks already use `date.today()` (e.g. areal CSV).
-5. **Uncertainty / limitations** — Document CDL noise, coarse grid (~320 m), and strict vs relaxed interpretation (`context/TASK2_RESULTS.md`, `context/RISKS.md`).
+5. **Uncertainty / limitations** — Document CDL noise, coarse grid (~557 m in latest metadata), strict vs relaxed interpretation, and **optional Bayesian DM** maps (`dm_p_regular`, `dm_alt_posterior_std`) as **epistemic** summaries of transition-based alternation (`context/TASK2_RESULTS.md` §2.7, `context/RISKS.md`).
 6. **Deliverables** — Figures and tables under `artifacts/` for graders; processed rasters under `data/processed/task2/` for downstream maps.
 
 **Task 1 reference:** `03_ndvi_phenology_hsgp_bayesian.ipynb` loads YAML, reads `data/processed/ndvi/..._metadata.json` for DOY alignment, writes figures to `cfg["output"]["figures_dir"]` and tables to `cfg["output"]["tables_dir"]`. Task 2 mirrors that layout with `task2_crop_rotation.yaml`.
@@ -65,7 +67,7 @@ python scripts/build_interim_data.py --dataset ndvi
 python scripts/process_interim_to_parquet.py --dataset ndvi --source interim
 ```
 
-Then re-run Task 2 notebooks **01 → 05** (order matters).
+Then re-run Task 2 notebooks **01 → 04** (order matters).
 
 ---
 

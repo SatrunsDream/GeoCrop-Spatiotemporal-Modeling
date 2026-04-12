@@ -57,6 +57,17 @@ classification:
     max_run_min: 7                   # or crop share ≥ 0.80
   irregular: everything_else
 
+# Conjugate Dirichlet–Multinomial per-pixel posteriors on corn/soy/other transitions (additive to rule-based classes).
+# P(regular) = Monte Carlo fraction of draws where (P̂(corn→soy)+P̂(soy→corn))/2 ≥ regular_alt_proxy_min under independent Dirichlet rows.
+bayesian_dm:
+  enabled: true
+  prior: jeffreys                    # jeffreys | uniform | informative_alternation
+  informative_boost: 1.0           # extra pseudo-count on C→S and S→C when prior is informative_alternation
+  n_posterior_samples: 256
+  regular_alt_proxy_min: 0.70      # same scale as empirical alternation among corn/soy edges (not P sum to 1.4)
+  min_origin_transitions: 1        # require at least this many year-pairs from corn or soy as origin
+  chunk_rows: 48000                # pixels per chunk for MC draws (RAM vs speed)
+
 spatial_smoothing:
   enabled: true
   kernel_size: 3                     # 3×3 majority filter to reduce CDL salt-and-pepper
@@ -64,7 +75,7 @@ spatial_smoothing:
 output:
   figures_dir: artifacts/figures/task2/
   tables_dir: artifacts/tables/task2/
-  # NB05 areal CSV + JSON (and run_bundle pointers): for Task 4 / report tables, not GeoTIFFs
+  # Notebook 04 (merged maps + areal) areal CSV + JSON (and run_bundle pointers): for Task 4 / report tables, not GeoTIFFs
   task4_tables_dir: artifacts/tables/task4/
   processed_dir: data/processed/task2/
 

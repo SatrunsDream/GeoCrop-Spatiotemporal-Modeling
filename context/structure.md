@@ -153,16 +153,18 @@ artifacts/
 | `artifacts/figures/task2/task2__runlength_distribution.png` | Discrete max run length (monoculture zone ≥7) |
 | `artifacts/figures/task2/task2__rotation_map__raw__20260411.png` | Rotation class map (raw) |
 | `artifacts/figures/task2/task2__rotation_map__smoothed__20260411.png` | Rotation class map (3×3 smoothed + annotations) |
-| `artifacts/figures/task2/task2__rotation_map__core_belt__*.png` | IA/IL/IN/NE zoom (NB04 `focus_state_names`) |
-| `artifacts/figures/task2/task2__rotation_class_by_county__*.png` | County choropleth of % regular — 13-state Belt (NB05 + TIGER) |
-| `artifacts/figures/task2/task2__rotation_class_by_county_core4__*.png` | County choropleth — IL / IN / IA / NE only (NB05) |
+| `artifacts/figures/task2/task2__rotation_map__core_belt__*.png` | IA/IL/IN/NE zoom (notebook 04 `focus_state_names`) |
+| `artifacts/figures/task2/task2__rotation_dm_p_regular__*.png` | Posterior **P(regular)** map (Dirichlet–Multinomial; notebook 04) |
+| `artifacts/figures/task2/task2__rotation_dm_alt_posterior_std__*.png` | Posterior std of alternation proxy (notebook 04) |
+| `artifacts/figures/task2/task2__rotation_class_by_county__*.png` | County choropleth of % regular — 13-state Belt (Notebook 04 + TIGER) |
+| `artifacts/figures/task2/task2__rotation_class_by_county_core4__*.png` | County choropleth — IL / IN / IA / NE only (Notebook 04) |
 
 ### Tables
 
 | Path | Description |
 |------|-------------|
 | `artifacts/tables/task2/task2__markov_transition_{counts,probs}.csv` | Markov transition tables (NB02) |
-| `artifacts/tables/task4/task2__areal_stats_by_class__*.csv` | Areal summary by rotation class (grid ha); NB05 |
+| `artifacts/tables/task4/task2__areal_stats_by_class__*.csv` | Areal summary by rotation class (grid ha); Task 2 notebook 04 |
 | `artifacts/tables/task4/task2__areal_stats_by_class__*__metadata.json` | `pixel_area_ha`, grid resolution, CRS, disclaimer vs 30 m CDL |
 | `artifacts/tables/task4/task2__areal_stats_by_region__*.csv` | Class % by state (13-state join) |
 | `artifacts/tables/task4/task2__areal_stats_by_county__*.csv` | Class % by county (TIGER join; smoothed label; 13-state) |
@@ -228,32 +230,25 @@ artifacts/
 - **Next steps:** Optional five-state vector mask; document study extent in report.
 
 #### notebooks/task2_crop_rotation/02_rotation_metrics_computation.ipynb
-- **Purpose:** Metrics on **ever** corn/soy stack; **eligibility** (≥5 corn/soy years); save **eligible-only** `rotation_metrics.parquet`; Markov 3×3; transition-volume printout; asymmetry bar chart; run-length discrete bars; metric plots.
+- **Purpose:** Metrics on **ever** corn/soy stack; **eligibility** (≥5 corn/soy years); save **eligible-only** `rotation_metrics.parquet`; Markov 3×3; transition-volume printout; asymmetry bar chart; run-length discrete bars; metric plots; **Bayesian Dirichlet–Multinomial** columns `dm_p_regular`, `dm_alt_posterior_std`, `dm_n_trans_origin_corn_soy` (`src.modeling.rotation_bayesian_dm`, YAML `bayesian_dm`).
 - **Inputs:** Same CDL Parquet slice; `src.modeling.rotation_classifier`
 - **Outputs:** `rotation_metrics.parquet`; Markov CSVs under `artifacts/tables/task2/`; figures `task2__ncornsoy_histogram.png`, `task2__transition_asymmetry.png`, `task2__runlength_distribution.png`, metric plots
 - **Key findings:** ~530k ever → **~301k eligible**; median alternation **0.5** on eligible pool; Markov shows sticky corn and soy→corn (`context/TASK2_RESULTS.md`).
 - **Next steps:** Align grid with Iowa+Nebraska if regional narrative is required.
 
 #### notebooks/task2_crop_rotation/03_rotation_classification.ipynb
-- **Purpose:** **Threshold sensitivity grid** + **primary** YAML classification; GeoTIFFs.
+- **Purpose:** **Threshold sensitivity grid** + **primary** YAML classification; GeoTIFFs; optional **DM float rasters** (`rotation_dm_p_regular.tif`, `rotation_dm_alt_posterior_std.tif`) when NB02 wrote `dm_*` columns.
 - **Inputs:** `rotation_metrics.parquet`, YAML thresholds, spatial metadata JSON
-- **Outputs:** `task2__threshold_sensitivity_grid.csv`, sensitivity figure, `rotation_class_map*.tif`, `rotation_metrics_classified.parquet`
+- **Outputs:** `task2__threshold_sensitivity_grid.csv`, sensitivity figure, `rotation_class_map*.tif`, `rotation_metrics_classified.parquet`, DM GeoTIFFs (see above)
 - **Key findings:** Strict primary **~16–17% regular**, **~27% mono**, **~55–57% irregular** on eligible pixels; relaxed (0.5, 5–6) reaches **~42–44% regular** (see sensitivity CSV).
 - **Next steps:** Report = strict primary + sensitivity figure; cite USDA definitions when comparing.
 
-#### notebooks/task2_crop_rotation/04_spatial_mapping_rotation.ipynb
-- **Purpose:** Publication-style maps from classified GeoTIFFs with **state boundary** overlays; optional **core-belt zoom** (IA/IL/IN/NE).
-- **Inputs:** Smoothed/raw rotation rasters; `data/external/states/*.shp` if present, else **Natural Earth 110m** admin-1 (**13-state** Corn Belt) via `src.viz.rotation_maps.load_cornbelt_state_boundaries_5070`.
-- **Outputs:** `artifacts/figures/task2/task2__rotation_map__*__*.png`, `task2__rotation_map__core_belt__*.png`
-- **Key findings:** Maps include **Corn Belt–wide** callout text; verify **bbox** so labels match the raster footprint.
-- **Next steps:** Side-by-side raw vs smoothed in report; adjust annotations if extent changes.
-
-#### notebooks/task2_crop_rotation/05_areal_statistics_export.ipynb
-- **Purpose:** Areal CSV + **metadata JSON** (grid ha, CRS, 30 m disclaimer) + **per-state (13 Corn Belt)** class shares + **per-county** (Census TIGER) shares + run bundle JSON.
-- **Inputs:** Smoothed rotation GeoTIFF; `rotation_metrics_classified.parquet`; spatial metadata; `load_cornbelt_state_boundaries_5070` (same as NB04); `src.io.tiger_counties.load_cornbelt_counties_5070` (cached under `data/external/tiger/`)
-- **Outputs:** `artifacts/tables/task4/task2__areal_stats_by_class__*.csv`, `*__metadata.json`, `task2__areal_stats_by_region__*.csv`, `task2__areal_stats_by_county__*.csv`, `task2__areal_stats_by_county_core4__*.csv`, `artifacts/figures/task2/task2__per_state_rotation_classes.png`, `task2__rotation_class_by_county__*.png`, `task2__rotation_class_by_county_core4__*.png`, `artifacts/logs/runs/*/run_bundle.json`
+#### notebooks/task2_crop_rotation/04_spatial_maps_and_areal_export.ipynb
+- **Purpose:** **Merged** former NB04+NB05: publication-style **class** maps (raw + smoothed) + **core-belt zoom**; **Bayesian P(regular)** and **posterior std** maps from DM GeoTIFFs; **areal** CSV + metadata JSON + **per-state** shares + **per-county** (TIGER) choropleths; **`run_bundle.json`** (includes DM GeoTIFF paths).
+- **Inputs:** Classified GeoTIFFs; DM float GeoTIFFs from NB03; `rotation_metrics_classified.parquet`; spatial metadata; `load_cornbelt_state_boundaries_5070`; `src.io.tiger_counties.load_cornbelt_counties_5070` (cached under `data/external/tiger/`)
+- **Outputs:** `artifacts/figures/task2/task2__rotation_map__*__*.png`, `task2__rotation_map__core_belt__*.png`, `task2__rotation_dm_*.png`, `artifacts/tables/task4/task2__areal_stats_by_class__*.csv`, `*__metadata.json`, `task2__areal_stats_by_region__*.csv`, `task2__areal_stats_by_county__*.csv`, `task2__areal_stats_by_county_core4__*.csv`, `task2__per_state_rotation_classes.png`, `task2__rotation_class_by_county__*.png`, `task2__rotation_class_by_county_core4__*.png`, `artifacts/logs/runs/*/run_bundle.json`
 - **Key findings:** By-region rows are **state names** from spatial join (plus `outside_configured_states` / `full_raster_extent` fallback if boundaries unavailable) — not an Iowa–Nebraska longitude proxy.
-- **Next steps:** Re-run after stack changes; interpret empty rare states as extent, not pipeline failure.
+- **Next steps:** Re-run after stack changes; interpret empty rare states as extent, not pipeline failure. (Legacy NB04/NB05 sources live under `notebooks/task2_crop_rotation/_deprecated/` for the merge rebuild script.)
 
 ---
 

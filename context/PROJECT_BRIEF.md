@@ -64,7 +64,7 @@ flowchart TB
   T4 --> A4["artifacts: models, maps,\nmetrics task4"]
 ```
 
-**Execution order for a cold start (typical):** (1) download and build interim stacks for the datasets you need; (2) run `process_interim_to_parquet.py` for CDL (required for Task 2), and for NDVI/SMAP as needed for Tasks 1, 3, and 4; (3) run each task’s notebooks in folder order (Task 2: **01 → 05**). Exact commands and paths are in `README.md`, `context/structure.md`, `context/INTERFACES.md`, and `context/TASK2_NAFSI_DATA_CONTRACT.md`.
+**Execution order for a cold start (typical):** (1) download and build interim stacks for the datasets you need; (2) run `process_interim_to_parquet.py` for CDL (required for Task 2), and for NDVI/SMAP as needed for Tasks 1, 3, and 4; (3) run each task’s notebooks in folder order (Task 2: **01 → 04**). Exact commands and paths are in `README.md`, `context/structure.md`, `context/INTERFACES.md`, and `context/TASK2_NAFSI_DATA_CONTRACT.md`.
 
 ### NAFSI-style research expectations vs tasks (mapping)
 
@@ -77,7 +77,7 @@ The Track 1 brief and common judging criteria mix **several distinct problems**.
 | Feature matrix from CDL temporal/spatial structure (+ optional NDVI/SMAP aggregates) | **Task 4** (features); **Task 2** uses CDL **sequences** for **rule-based rotation metrics**, not a sklearn/LightGBM classifier | Task 4: `INTERFACES.md` (`build_feature_matrix`); Task 2: `context/TASK2_RESULTS.md`, `src/` rotation metrics |
 | Train on past years, validate on held-out year(s) | **Task 4** | Not applicable to Task 2’s fixed 2015–2024 rotation window (descriptive / rule-based, not year-held-out classification) |
 | Feature **importance** / ablation (CDL-only vs +NDVI vs +SMAP) | **Task 4** | Task 2 does **not** train a model; see `context/STATUS.md` pending Task 4 |
-| **Rotation** pattern identification, Markov/sensitivity, maps of rotation **classes** | **Task 2** | `notebooks/task2_crop_rotation/`, `context/TASK2_RESULTS.md`, `artifacts/figures/task2/`, `artifacts/tables/task2/` (Markov/sensitivity), **`artifacts/tables/task4/`** (NB05 areal CSV/JSON for Task 4 bridge) |
+| **Rotation** pattern identification, Markov/sensitivity, maps of rotation **classes** | **Task 2** | `notebooks/task2_crop_rotation/`, `context/TASK2_RESULTS.md`, `artifacts/figures/task2/`, `artifacts/tables/task2/` (Markov/sensitivity), **`artifacts/tables/task4/`** (notebook 04 areal CSV/JSON for Task 4 bridge) |
 | Phenology / NDVI vs CDL | **Task 1** | `notebooks/task1_ndvi_timeseries/` |
 | Soil moisture anomalies vs baseline | **Task 3** | `notebooks/task3_soil_moisture/` |
 
