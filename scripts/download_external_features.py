@@ -3,29 +3,25 @@
 download_external_features.py — Download and preprocess external features for Task 4.
 
 Fetches four datasets and saves ready-to-join Parquet files at the study grid resolution
-(320m, EPSG:5070, 1520×2048 pixels).
+(320m, EPSG:5070, 1520x2048 pixels).
 
 Outputs (all in data/processed/task4/):
     soil_features.parquet           -- gSSURGO soil properties (static)
     terrain_features.parquet        -- 3DEP elevation + slope (static)
-    daymet_features_{year}.parquet  -- Daymet V4 climate (per year 2013–2023)
-    csb_features.parquet            -- CSB field boundaries (optional; national ZIP is multi-GB)
+    daymet_features_{year}.parquet  -- gridMET climate aggregates (per year; filenames kept for Task 4 joins)
+    csb_features.parquet            -- CSB field boundaries (optional)
 
 Usage:
     python scripts/download_external_features.py --all
     python scripts/download_external_features.py --all --skip-soil
-    python scripts/download_external_features.py --soil --soil-mukey-geotiff /path/to/MapunitRaster.tif
+    python scripts/download_external_features.py --soil --terrain
     python scripts/download_external_features.py --daymet --years 2020 2021 2022
 
-gSSURGO MUKEY raster:
- USDA ``MapunitRaster_30m`` WCS (``.../Spatial/SDM.wcs``) returns404 as of 2026 on both
-    ``nrcs.usda.gov`` and ``sc.egov.usda.gov`` hosts. To build ``soil_features.parquet`` you can:
-    (1) download state/county gSSURGO GeoDatabase rasters from NRCS and pass
-    ``--soil-mukey-geotiff`` (any CRS; the script reprojects to the study grid), or
-    (2) skip soil with ``--skip-soil`` and join soil features later.
+Dependencies (see requirements.txt): xarray, scipy, rioxarray, rasterio, netCDF4 (OPeNDAP),
+requests, numpy, pandas, pyproj, shapely, geopandas (optional for CSB).
 
-New dependencies:
-    pip install pydaymet>=0.16 py3dep>=0.16
+  - Climate: gridMET via xarray + netCDF4 OPeNDAP — no pydaymet, no Earthdata auth
+  - Terrain: USGS 3DEP ImageServer exportImage + rasterio — no py3dep, no aiohttp
 """
 
 from __future__ import annotations
@@ -33,8 +29,6 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-import os
-import sys
 import zipfile
 from io import BytesIO
 from pathlib import Path
@@ -50,21 +44,7 @@ from rasterio.enums import Resampling
 from rasterio.transform import Affine
 
 try:
-    import pydaymet  # noqa: F401
-
-    HAS_PYDAYMET = True
-except ImportError:
-    HAS_PYDAYMET = False
-
-try:
-    import py3dep  # noqa: F401
-
-    HAS_PY3DEP = True
-except ImportError:
-    HAS_PY3DEP = False
-
-try:
-    import geopandas as gpd  # noqa: F401
+    import geopandas as gpd
 
     HAS_GPD = True
 except ImportError:
@@ -73,10 +53,6 @@ except ImportError:
 REPO_ROOT = Path(__file__).resolve().parent.parent
 META_PATH = REPO_ROOT / "data" / "processed" / "cdl" / "cdl_stack_spatial_metadata.json"
 OUT_DIR = REPO_ROOT / "data" / "processed" / "task4"
-
-# Tabular API: use ``/Tabular/post.rest`` with ``format=JSON`` (no column header row).
-# Valu1-style summaries are not exposed on public SDA; we join muaggatt + dominant component + chorizon.
-SDA_POST_URL = "https://SDMDataAccess.nrcs.usda.gov/Tabular/post.rest"
 
 DAYMET_YEARS = list(range(2013, 2024))
 
@@ -111,18 +87,18 @@ def load_grid_meta():
     width      : int
     bbox_5070  : tuple (west, south, east, north) in EPSG:5070 metres
     bbox_wgs84 : tuple (west_lon, south_lat, east_lon, north_lat)
-    geom_wgs84 : shapely.geometry.Polygon  (for pydaymet)
+    geom_wgs84 : shapely.geometry.Polygon
     affine     : rasterio.transform.Affine
     """
-    with open(META_PATH, encoding="utf-8") as f:
+    with open(META_PATH) as f:
         meta = json.load(f)
 
     transform = meta["transform"]
-    height = int(meta["height"])
-    width = int(meta["width"])
+    height = meta["height"]
+    width = meta["width"]
 
-    ox, sx = transform[2], transform[0]
-    oy, sy = transform[5], transform[4]
+    ox, sx = transform[2], transform[0]  # origin X, pixel width (m)
+    oy, sy = transform[5], transform[4]  # origin Y, pixel height (negative)
 
     west = ox
     north = oy
@@ -138,14 +114,22 @@ def load_grid_meta():
 
     affine = Affine(sx, transform[1], ox, transform[3], sy, oy)
 
-    log.info("Grid: %sx%s, EPSG:5070 bbox %s", height, width, tuple(round(v) for v in bbox_5070))
+    log.info(f"Grid: {height}x{width}, EPSG:5070 bbox {tuple(round(v) for v in bbox_5070)}")
     return transform, height, width, bbox_5070, bbox_wgs84, geom_wgs84, affine
 
 
-def pixels_to_df(height: int, width: int) -> pd.DataFrame:
-    """Build a DataFrame with (iy, ix) for all H×W pixels."""
+def pixels_to_df(height, width):
+    """
+    Build a DataFrame with (iy, ix) for all H*W pixels.
+    All fetchers use this to flatten raster arrays into joinable rows.
+    """
     iy, ix = np.meshgrid(np.arange(height), np.arange(width), indexing="ij")
-    return pd.DataFrame({"iy": iy.ravel().astype("int32"), "ix": ix.ravel().astype("int32")})
+    return pd.DataFrame(
+        {
+            "iy": iy.ravel().astype("int32"),
+            "ix": ix.ravel().astype("int32"),
+        }
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -154,43 +138,39 @@ def pixels_to_df(height: int, width: int) -> pd.DataFrame:
 
 
 def _wcs_mukey_request(bbox_5070, width_px, height_px):
-    """Single WCS GetCoverage request. Returns raw GeoTIFF bytes.
-
-    Note: As of 2026 this endpoint often returns HTTP 404 (WCS retired). Prefer
-    ``--soil-mukey-geotiff`` with a local MapunitRaster, or ``--skip-soil``.
-    """
+    """Single WCS GetCoverage request. Returns raw GeoTIFF bytes."""
     west, south, east, north = bbox_5070
     url = (
-        "https://sdmdataaccess.sc.egov.usda.gov/Spatial/SDM.wcs"
+        "https://SDMDataAccess.nrcs.usda.gov/Spatial/SDM.wcs"
         "?SERVICE=WCS&VERSION=1.0.0&REQUEST=GetCoverage"
         "&COVERAGE=MapunitRaster_30m"
         "&CRS=EPSG:5070"
         f"&BBOX={west},{south},{east},{north}"
         f"&WIDTH={width_px}&HEIGHT={height_px}"
-        "&FORMAT=GeoTIFF_Float"
+        "&FORMAT=GeoTIFF"
     )
-    log.info("WCS request: %sx%s px", width_px, height_px)
+    log.info(f"WCS request: {width_px}x{height_px} px")
     r = requests.get(url, timeout=300)
     r.raise_for_status()
     return r.content
 
 
-def _fetch_mukey_tiled(bbox_5070, raw_tif_path: Path):
-    """Download MUKEY raster in 2×2 tiles and stitch into one GeoTIFF."""
+def _fetch_mukey_tiled(bbox_5070, raw_tif_path):
+    """Download MUKEY raster in 2x2 tiles and stitch into one GeoTIFF."""
     west, south, east, north = bbox_5070
     mid_x = (west + east) / 2
     mid_y = (south + north) / 2
 
     quadrants = [
-        (west, mid_y, mid_x, north),
-        (mid_x, mid_y, east, north),
-        (west, south, mid_x, mid_y),
-        (mid_x, south, east, mid_y),
+        (west, mid_y, mid_x, north),  # NW
+        (mid_x, mid_y, east, north),  # NE
+        (west, south, mid_x, mid_y),  # SW
+        (mid_x, south, east, mid_y),  # SE
     ]
 
     w30_full = int(round((east - west) / 30))
     h30_full = int(round((north - south) / 30))
-    full_arr = np.zeros((h30_full, w30_full), dtype="float32")
+    full_arr = np.zeros((h30_full, w30_full), dtype="int32")
     tf_full = rasterio.transform.from_bounds(west, south, east, north, w30_full, h30_full)
 
     for q_bbox in quadrants:
@@ -206,7 +186,7 @@ def _fetch_mukey_tiled(bbox_5070, raw_tif_path: Path):
 
     profile = {
         "driver": "GTiff",
-        "dtype": "float32",
+        "dtype": "int32",
         "width": w30_full,
         "height": h30_full,
         "count": 1,
@@ -219,9 +199,9 @@ def _fetch_mukey_tiled(bbox_5070, raw_tif_path: Path):
         dst.write(full_arr, 1)
 
 
-def _fetch_mukey_raster(bbox_5070, affine, height, width, raw_tif_path: Path):
+def _fetch_mukey_raster(bbox_5070, affine, height, width, raw_tif_path):
     """
-    Download 30m MUKEY raster (tiles if needed), resample to 320m via majority.
+    Download 30m MUKEY raster (tiles if needed), resample to study grid via majority.
     Returns int32 array of shape (height, width).
     """
     if not raw_tif_path.exists():
@@ -233,12 +213,12 @@ def _fetch_mukey_raster(bbox_5070, affine, height, width, raw_tif_path: Path):
             raw_tif_path.parent.mkdir(parents=True, exist_ok=True)
             raw_tif_path.write_bytes(content)
         except Exception as e:
-            log.warning("Single WCS request failed (%s), falling back to 2x2 tiling", e)
+            log.warning(f"Single WCS request failed ({e}), falling back to 2x2 tiling")
             _fetch_mukey_tiled(bbox_5070, raw_tif_path)
     else:
-        log.info("Raw MUKEY raster found at %s, skipping download", raw_tif_path)
+        log.info(f"Raw MUKEY raster found at {raw_tif_path}, skipping download")
 
-    dst_array = np.empty((height, width), dtype="float32")
+    dst_array = np.zeros((height, width), dtype="int32")
     with rasterio.open(raw_tif_path) as src:
         rasterio.warp.reproject(
             source=rasterio.band(src, 1),
@@ -249,149 +229,73 @@ def _fetch_mukey_raster(bbox_5070, affine, height, width, raw_tif_path: Path):
             dst_crs="EPSG:5070",
             resampling=Resampling.mode,
         )
-    return dst_array.astype("int32")
+    return dst_array
 
 
-def _reproject_mukey_geotiff(src_path: Path, affine, height: int, width: int) -> np.ndarray:
-    """Read a local MUKEY GeoTIFF (any CRS) and majority-resample to the study grid."""
-    dst_array = np.empty((height, width), dtype="float32")
-    with rasterio.open(src_path) as src:
-        rasterio.warp.reproject(
-            source=rasterio.band(src, 1),
-            destination=dst_array,
-            src_transform=src.transform,
-            src_crs=src.crs,
-            dst_transform=affine,
-            dst_crs="EPSG:5070",
-            resampling=Resampling.mode,
-        )
-    return dst_array.astype("int32")
-
-
-def _sda_query_json(sql: str) -> list:
-    r = requests.post(SDA_POST_URL, data={"format": "JSON", "query": sql}, timeout=180)
-    r.raise_for_status()
-    if r.text.lstrip().startswith("<?xml"):
-        raise RuntimeError(f"SDA returned XML (query error): {r.text[:500]}")
-    return r.json().get("Table", [])
-
-
-def _aggregate_chorizon_to_mukey(ch_df: pd.DataFrame) -> pd.DataFrame:
-    """0–150 cm thickness-weighted clay; AWC summed as mm water (awc_r × thickness(cm) × 10)."""
-
-    def _one_mukey(grp: pd.DataFrame) -> pd.Series:
-        top, bot = 0.0, 150.0
-        awc_mm = 0.0
-        awc_any = False
-        clay_w = 0.0
-        clay_t = 0.0
-        for _, r in grp.iterrows():
-            d0 = float(r["hzdept_r"])
-            d1 = float(r["hzdepb_r"])
-            c0 = max(d0, top)
-            c1 = min(d1, bot)
-            if c1 <= c0:
-                continue
-            th = c1 - c0
-            awc_r = r["awc_r"]
-            clay = r["claytotal_r"]
-            if pd.notna(awc_r):
-                awc_mm += float(awc_r) * th * 10.0
-                awc_any = True
-            if pd.notna(clay):
-                clay_w += float(clay) * th
-                clay_t += th
-        return pd.Series(
-            {
-                "soil_awc_150cm": np.float32(awc_mm) if awc_any else np.nan,
-                "soil_clay_pct": np.float32(clay_w / clay_t) if clay_t > 0 else np.nan,
-            }
-        )
-
-    if ch_df.empty:
-        return pd.DataFrame(columns=["mukey", "soil_awc_150cm", "soil_clay_pct"])
-    gcols = ["hzdept_r", "hzdepb_r", "claytotal_r", "awc_r"]
-    out = ch_df.groupby("mukey", sort=False)[gcols].apply(_one_mukey)
-    return out.reset_index()
-
-
-def _fetch_soil_attributes(mukeys) -> pd.DataFrame:
+def _fetch_soil_attributes(mukeys):
     """
-    Query USDA SDA for mapunit-level soil attributes (muaggatt + dominant component + chorizon).
-
-    ``soil_soc_150`` is not computed here (would need bulk-density–weighted SOC); left NaN in output.
+    POST SQL to USDA SDA REST in chunks of 1000 MUKEYs.
+    Returns DataFrame: mukey, drclassdcd, aws0150wta, claytotal_r, hydgrpdcd, soc0_150.
     """
-    mukey_list = sorted({int(k) for k in mukeys if k and int(k) > 0})
-    if not mukey_list:
-        return pd.DataFrame()
-
-    chunk_size = 400
-    n_chunks = max(1, (len(mukey_list) + chunk_size - 1) // chunk_size)
-    agg_parts: list[pd.DataFrame] = []
-    meta_parts: list[pd.DataFrame] = []
-
+    mukey_list = [int(k) for k in mukeys if k > 0]
+    results = []
+    chunk_size = 1000
     for i in range(0, len(mukey_list), chunk_size):
         chunk = mukey_list[i : i + chunk_size]
-        in_list = ",".join(str(k) for k in chunk)
-        log.info("  SDA soil chunk %s/%s (%s mukeys)", i // chunk_size + 1, n_chunks, len(chunk))
-
-        sql_meta = (
-            f"SELECT mukey, drclassdcd, hydgrpdcd FROM muaggatt WHERE mukey IN ({in_list})"
+        sql = (
+            "SELECT mukey, drclassdcd, aws0150wta, claytotal_r, hydgrpdcd, soc0_150 "
+            "FROM Valu1 "
+            f"WHERE mukey IN ({','.join(str(k) for k in chunk)})"
         )
-        table_m = _sda_query_json(sql_meta)
-        if table_m:
-            mdf = pd.DataFrame(table_m, columns=["mukey", "drclassdcd", "hydgrpdcd"])
-            mdf["mukey"] = pd.to_numeric(mdf["mukey"], errors="coerce").astype("int32")
-            meta_parts.append(mdf)
-
-        sql_ch = (
-            "SELECT c.mukey, ch.hzdept_r, ch.hzdepb_r, ch.claytotal_r, ch.awc_r "
-            "FROM component c INNER JOIN chorizon ch ON c.cokey = ch.cokey "
-            f"WHERE c.majcompflag = 'Yes' AND c.mukey IN ({in_list})"
+        r = requests.post(
+            "https://SDMDataAccess.nrcs.usda.gov/Tabular/SDMTabularService/post.rest",
+            data={"format": "JSON+COLUMNNAME", "query": sql},
+            timeout=120,
         )
-        table_c = _sda_query_json(sql_ch)
-        if table_c:
-            ch_df = pd.DataFrame(
-                table_c, columns=["mukey", "hzdept_r", "hzdepb_r", "claytotal_r", "awc_r"]
-            )
-            ch_df["mukey"] = pd.to_numeric(ch_df["mukey"], errors="coerce").astype("int32")
-            for col in ["hzdept_r", "hzdepb_r", "claytotal_r", "awc_r"]:
-                ch_df[col] = pd.to_numeric(ch_df[col], errors="coerce")
-            agg_parts.append(_aggregate_chorizon_to_mukey(ch_df))
+        r.raise_for_status()
+        table = r.json().get("Table", [])
+        if len(table) >= 2:
+            results.append(pd.DataFrame(table[1:], columns=table[0]))
+        log.info(f"  SDA chunk {i // chunk_size + 1}/{-(-len(mukey_list) // chunk_size)}: {len(table)-1} rows")
 
-    meta = pd.concat(meta_parts, ignore_index=True) if meta_parts else pd.DataFrame()
-    agg = pd.concat(agg_parts, ignore_index=True) if agg_parts else pd.DataFrame()
+    return pd.concat(results, ignore_index=True) if results else pd.DataFrame()
 
-    if meta.empty and agg.empty:
-        return pd.DataFrame()
 
-    if meta.empty:
-        base = agg.copy()
-        base["drclassdcd"] = np.nan
-        base["hydgrpdcd"] = np.nan
-    elif agg.empty:
-        base = meta.copy()
-        base["soil_awc_150cm"] = np.nan
-        base["soil_clay_pct"] = np.nan
-    else:
-        base = meta.merge(agg, on="mukey", how="outer")
+def fetch_ssurgo_soil(bbox_5070, affine, height, width, out_dir):
+    """Download gSSURGO MUKEY raster, resample to study grid, join tabular attributes, save parquet."""
+    out_path = out_dir / "soil_features.parquet"
+    if out_path.exists():
+        log.info("soil_features.parquet already exists, skipping")
+        return
 
-    base["mukey"] = pd.to_numeric(base["mukey"], errors="coerce").astype("int32")
-    base["soil_drainage_class"] = base["drclassdcd"].map(DRAINAGE_ORDER).astype("float32")
+    log.info("=== gSSURGO soil features ===")
+    raw_tif = out_dir / "_cache" / "ssurgo_mukey_30m.tif"
+    mukey_arr = _fetch_mukey_raster(bbox_5070, affine, height, width, raw_tif)
 
-    hg = base["hydgrpdcd"].astype(str).str.strip().str.upper().str[0]
-    base["_hg"] = hg.where(hg.isin(["A", "B", "C", "D"]), "")
+    unique_mukeys = np.unique(mukey_arr)
+    log.info(f"Unique MUKEYs: {len(unique_mukeys)}")
+    attr_df = _fetch_soil_attributes(unique_mukeys)
+
+    if attr_df.empty:
+        log.warning("No soil attributes returned from SDA")
+        attr_df = pd.DataFrame(
+            columns=["mukey", "drclassdcd", "aws0150wta", "claytotal_r", "hydgrpdcd", "soc0_150"]
+        )
+
+    attr_df["mukey"] = attr_df["mukey"].astype("int32")
+
+    attr_df["soil_drainage_class"] = attr_df["drclassdcd"].map(DRAINAGE_ORDER).astype("float32")
+
+    attr_df["_hg"] = attr_df["hydgrpdcd"].str[0].fillna("")
     for code in ["A", "B", "C", "D"]:
-        base[f"soil_hydgrp_{code}"] = (base["_hg"] == code).astype("float32")
-    base.drop(columns=["_hg"], inplace=True, errors="ignore")
+        attr_df[f"soil_hydgrp_{code}"] = (attr_df["_hg"] == code).astype("float32")
 
-    if "soil_awc_150cm" not in base.columns:
-        base["soil_awc_150cm"] = np.nan
-    if "soil_clay_pct" not in base.columns:
-        base["soil_clay_pct"] = np.nan
-    base["soil_awc_150cm"] = base["soil_awc_150cm"].astype("float32")
-    base["soil_clay_pct"] = base["soil_clay_pct"].astype("float32")
-    base["soil_soc_150"] = np.float32(np.nan)
+    for col, new_col in [
+        ("aws0150wta", "soil_awc_150cm"),
+        ("claytotal_r", "soil_clay_pct"),
+        ("soc0_150", "soil_soc_150"),
+    ]:
+        attr_df[new_col] = pd.to_numeric(attr_df[col], errors="coerce").astype("float32")
 
     keep = [
         "mukey",
@@ -404,90 +308,53 @@ def _fetch_soil_attributes(mukeys) -> pd.DataFrame:
         "soil_hydgrp_D",
         "soil_soc_150",
     ]
-    return base[keep].drop_duplicates("mukey")
-
-
-def fetch_ssurgo_soil(
-    bbox_5070,
-    affine,
-    height,
-    width,
-    out_dir: Path,
-    mukey_geotiff: Path | None = None,
-):
-    """Download gSSURGO MUKEY raster, resample to 320m, join tabular attributes, save parquet."""
-    out_path = out_dir / "soil_features.parquet"
-    if out_path.exists():
-        log.info("soil_features.parquet already exists, skipping")
-        return
-
-    log.info("=== gSSURGO soil features ===")
-    raw_tif = out_dir / "_cache" / "ssurgo_mukey_30m.tif"
-    if mukey_geotiff is not None and Path(mukey_geotiff).is_file():
-        log.info("Using local MUKEY GeoTIFF: %s", mukey_geotiff)
-        mukey_arr = _reproject_mukey_geotiff(Path(mukey_geotiff), affine, height, width)
-    else:
-        mukey_arr = _fetch_mukey_raster(bbox_5070, affine, height, width, raw_tif)
-
-    unique_mukeys = np.unique(mukey_arr)
-    log.info("Unique MUKEYs: %s", len(unique_mukeys))
-    attr_df = _fetch_soil_attributes(unique_mukeys)
-
-    if attr_df.empty:
-        log.warning("No soil attributes returned from SDA — soil columns will be null")
-        attr_df = pd.DataFrame(
-            columns=[
-                "mukey",
-                "soil_drainage_class",
-                "soil_awc_150cm",
-                "soil_clay_pct",
-                "soil_hydgrp_A",
-                "soil_hydgrp_B",
-                "soil_hydgrp_C",
-                "soil_hydgrp_D",
-                "soil_soc_150",
-            ]
-        )
+    attr_df = attr_df[keep].drop_duplicates("mukey")
 
     pixels = pixels_to_df(height, width)
     pixels["mukey"] = mukey_arr.ravel()
     result = pixels.merge(attr_df, on="mukey", how="left").drop(columns=["mukey"])
 
     result.to_parquet(out_path, engine="pyarrow", compression="zstd", index=False)
-    log.info("Saved: %s shape=%s", out_path, result.shape)
+    log.info(f"Saved: {out_path}  shape={result.shape}")
 
 
 # ---------------------------------------------------------------------------
-# Section 2: Daymet V4 climate
+# Section 2: gridMET climate (Daymet-compatible column names)
 # ---------------------------------------------------------------------------
 
 
-def fetch_daymet_climate(bbox_wgs84, geom_wgs84, affine, height, width, years, out_dir: Path):
+def fetch_gridmet_climate(bbox_wgs84, affine, height, width, years, out_dir):
     """
-    Download per-year Daymet V4 data, compute GDD/precip/temp features,
-    reproject to EPSG:5070 at 320m, save one parquet per year.
-    Skips years where output already exists (resume-safe).
+    Download gridMET daily climate via public OPeNDAP (no Earthdata auth).
+
+    Source: Northwest Knowledge Network THREDDS
+    Vars: tmax/tmin in Kelvin; pr = mm/day. CRS WGS84, ~4 km.
+
+    Output columns use daymet_* names for downstream compatibility.
     """
-    if not HAS_PYDAYMET:
-        log.error("pydaymet not installed -- skipping Daymet. pip install pydaymet")
-        return
+    import rioxarray  # noqa: F401
+    import xarray as xr
 
-    try:
-        import certifi
+    # NKN catalogs use tmmx / tmmn / pr (not tmax / tmin). See reacch_climate_MET_catalog.html.
+    GRIDMET_BASE = "http://thredds.northwestknowledge.net:8080/thredds/dodsC/MET"
+    GRIDMET_FILES = {
+        "tmax": ("tmmx", "air_temperature"),
+        "tmin": ("tmmn", "air_temperature"),
+        "pr": ("pr", "precipitation_amount"),
+    }
+    KELVIN = 273.15
+    w_lon, s_lat, e_lon, n_lat = bbox_wgs84
 
-        ca = certifi.where()
-        os.environ.setdefault("SSL_CERT_FILE", ca)
-        os.environ.setdefault("REQUESTS_CA_BUNDLE", ca)
-    except ImportError:
-        pass
+    log.info("=== gridMET climate features (OPeNDAP, no Earthdata) ===")
 
-    import pydaymet as daymet
-    import rioxarray  # noqa: F401  # needed for .rio accessor
+    def _clip(ds):
+        lat_mask = (ds.lat >= s_lat - 0.5) & (ds.lat <= n_lat + 0.5)
+        lon_mask = (ds.lon >= w_lon - 0.5) & (ds.lon <= e_lon + 0.5)
+        return ds.isel(lat=lat_mask, lon=lon_mask)
 
-    log.info("=== Daymet V4 climate features ===")
-
-    def _reproject_da(da, ds_crs):
-        da = da.rio.write_crs(ds_crs)
+    def _reproject_da(da):
+        da = da.rio.write_crs("EPSG:4326")
+        da = da.rio.set_spatial_dims(x_dim="lon", y_dim="lat")
         return (
             da.rio.reproject(
                 "EPSG:5070",
@@ -500,128 +367,150 @@ def fetch_daymet_climate(bbox_wgs84, geom_wgs84, affine, height, width, years, o
             .astype("float32")
         )
 
+    def _open_gridmet(kind: str, year: int):
+        folder, vname = GRIDMET_FILES[kind]
+        url = f"{GRIDMET_BASE}/{folder}/{folder}_{year}.nc"
+        ds = xr.open_dataset(url, engine="netcdf4")
+        if vname not in ds.data_vars:
+            vname = next(iter(ds.data_vars))
+        return _clip(ds)[vname].load()
+
     for year in years:
         out_path = out_dir / f"daymet_features_{year}.parquet"
         if out_path.exists():
-            log.info("  %s: already exists, skipping", year)
+            log.info(f"  {year}: already exists, skipping")
             continue
 
-        log.info("  Downloading Daymet %s...", year)
+        log.info(f"  Downloading gridMET {year} ...")
         try:
-            ds = daymet.get_bygeom(
-                geom_wgs84,
-                (f"{year}-01-01", f"{year}-12-31"),
-                variables=["tmax", "tmin", "prcp"],
-                crs="EPSG:4326",
-            )
+            tmax_k = _open_gridmet("tmax", year)
+            tmin_k = _open_gridmet("tmin", year)
+            pr = _open_gridmet("pr", year)
+
+            tmax = tmax_k - KELVIN
+            tmin = tmin_k - KELVIN
+
         except Exception as e:
-            log.error("  Daymet %s failed: %s", year, e)
+            log.error(f"  gridMET {year} failed: {e}")
             continue
 
-        times = pd.to_datetime(ds.time.values)
+        t_dim = "day" if "day" in tmax.dims else "time"
+        times = pd.to_datetime(tmax[t_dim].values)
         doy = times.dayofyear
-        crs = ds.rio.crs or "EPSG:4326"
 
-        gs_mask = (doy >= 100) & (doy <= 280)
-        tmean = (ds["tmax"].isel(time=gs_mask) + ds["tmin"].isel(time=gs_mask)) / 2
-        gdd_da = (tmean - 10).clip(min=0).sum("time")
+        gs = (doy >= 100) & (doy <= 280)
+        tmean = (tmax.isel({t_dim: gs}) + tmin.isel({t_dim: gs})) / 2
+        gdd_da = (tmean - 10).clip(min=0).sum(t_dim)
 
-        spr_mask = (doy >= 91) & (doy <= 151)
-        prcp_spr = ds["prcp"].isel(time=spr_mask).sum("time")
-
-        gs_p_mask = (doy >= 121) & (doy <= 273)
-        prcp_gs = ds["prcp"].isel(time=gs_p_mask).sum("time")
-
-        jul_mask = (doy >= 182) & (doy <= 212)
-        tmax_july = ds["tmax"].isel(time=jul_mask).mean("time")
+        spr_da = pr.isel({t_dim: (doy >= 60) & (doy <= 151)}).sum(t_dim)
+        gs_p_da = pr.isel({t_dim: (doy >= 91) & (doy <= 273)}).sum(t_dim)
+        jul_da = tmax.isel({t_dim: (doy >= 182) & (doy <= 212)}).mean(t_dim)
 
         pixels = pixels_to_df(height, width)
-        pixels["daymet_gdd"] = _reproject_da(gdd_da, crs)
-        pixels["daymet_prcp_spring"] = _reproject_da(prcp_spr, crs)
-        pixels["daymet_prcp_gs"] = _reproject_da(prcp_gs, crs)
-        pixels["daymet_tmax_july"] = _reproject_da(tmax_july, crs)
+        pixels["daymet_gdd"] = _reproject_da(gdd_da)
+        pixels["daymet_prcp_spring"] = _reproject_da(spr_da)
+        pixels["daymet_prcp_gs"] = _reproject_da(gs_p_da)
+        pixels["daymet_tmax_july"] = _reproject_da(jul_da)
 
         pixels.to_parquet(out_path, engine="pyarrow", compression="zstd", index=False)
-        log.info("  Saved: %s", out_path)
-        del ds, gdd_da, prcp_spr, prcp_gs, tmax_july
+        log.info(f"  Saved: {out_path}")
+        del tmax_k, tmin_k, pr, tmax, tmin, gdd_da, spr_da, gs_p_da, jul_da
 
 
 # ---------------------------------------------------------------------------
-# Section 3: 3DEP terrain
+# Section 3: 3DEP terrain — USGS ImageServer REST
 # ---------------------------------------------------------------------------
 
+_3DEP_URL = (
+    "https://elevation.nationalmap.gov/arcgis/rest/services"
+    "/3DEPElevation/ImageServer/exportImage"
+)
 
-def fetch_3dep_terrain(bbox_5070, affine, height, width, out_dir: Path):
-    """Download DEM + slope + aspect at 30m, derive terrain features, resample to 320m."""
-    if not HAS_PY3DEP:
-        log.error("py3dep not installed -- skipping terrain. pip install py3dep")
-        return
 
-    import py3dep
-    import rioxarray  # noqa: F401
+def _request_dem_tile(west, south, east, north, w_px, h_px, timeout=300):
+    """Request one DEM tile from USGS 3DEP ImageServer. Returns float32 array (h_px, w_px)."""
+    params = {
+        "bbox": f"{west},{south},{east},{north}",
+        "bboxSR": 5070,
+        "size": f"{w_px},{h_px}",
+        "imageSR": 5070,
+        "format": "tiff",
+        "pixelType": "F32",
+        "noDataInterpretation": "esriNoDataMatchAny",
+        "f": "image",
+    }
+    r = requests.get(_3DEP_URL, params=params, timeout=timeout)
+    r.raise_for_status()
+    with rasterio.open(BytesIO(r.content)) as src:
+        return src.read(1).astype("float32")
 
+
+def fetch_3dep_terrain(bbox_5070, affine, height, width, out_dir):
+    """
+    DEM from USGS 3DEP ImageServer; slope / northness / flat flag via numpy.gradient.
+    """
     out_path = out_dir / "terrain_features.parquet"
     if out_path.exists():
         log.info("terrain_features.parquet already exists, skipping")
         return
 
-    log.info("=== 3DEP terrain features ===")
+    log.info("=== 3DEP terrain (USGS REST) ===")
     west, south, east, north = bbox_5070
-    bbox_tuple = (west, south, east, north)
-    # BBox is already EPSG:5070; py3dep defaults geo_crs=4326, which corrupts the footprint.
-    _g5070 = "EPSG:5070"
 
-    dem = py3dep.get_map("DEM", bbox_tuple, resolution=30, geo_crs=_g5070, crs=_g5070)
-    slope = py3dep.get_map("Slope Degrees", bbox_tuple, resolution=30, geo_crs=_g5070, crs=_g5070)
-    aspect = py3dep.get_map("Aspect Degrees", bbox_tuple, resolution=30, geo_crs=_g5070, crs=_g5070)
+    dem = None
+    try:
+        log.info(f"Requesting DEM at {width}x{height} px (single tile) ...")
+        dem = _request_dem_tile(west, south, east, north, width, height, timeout=300)
+    except Exception as e:
+        log.warning(f"Single-tile DEM request failed ({e}), trying 2x2 tiles ...")
 
-    northness_da = aspect.copy(data=np.cos(np.deg2rad(aspect.values)).astype("float32"))
-    flat_da = slope.copy(data=(slope.values < 1.0).astype("float32"))
+    if dem is None:
+        mid_x = (west + east) / 2
+        mid_y = (south + north) / 2
+        hw, hh = width // 2, height // 2
+        quads = [
+            (west, mid_y, mid_x, north, hw, hh, 0, 0),
+            (mid_x, mid_y, east, north, width - hw, hh, hw, 0),
+            (west, south, mid_x, mid_y, hw, height - hh, 0, hh),
+            (mid_x, south, east, mid_y, width - hw, height - hh, hw, hh),
+        ]
+        dem = np.zeros((height, width), dtype="float32")
+        for w, s, e, n, tw, th, col, row in quads:
+            log.info(f"  Tile ({col},{row}) {tw}x{th} px ...")
+            tile = _request_dem_tile(w, s, e, n, tw, th, timeout=300)
+            dem[row : row + th, col : col + tw] = tile
 
-    def _reproject_da(da, method=Resampling.bilinear):
-        da = da.rio.write_crs("EPSG:5070")
-        return (
-            da.rio.reproject(
-                "EPSG:5070",
-                shape=(height, width),
-                transform=affine,
-                resampling=method,
-                nodata=np.nan,
-            )
-            .values.ravel()
-            .astype("float32")
-        )
+    px = abs(float(affine.a))
+    py = abs(float(affine.e))
+
+    dz_dy, dz_dx = np.gradient(dem, py, px)
+    slope_deg = np.degrees(np.arctan(np.sqrt(dz_dx**2 + dz_dy**2))).astype("float32")
+    aspect_rad = np.arctan2(-dz_dy, dz_dx)
+    northness = np.cos(aspect_rad).astype("float32")
+    flat_flag = (slope_deg < 1.0).astype("float32")
 
     pixels = pixels_to_df(height, width)
-    pixels["terrain_elevation"] = _reproject_da(dem)
-    pixels["terrain_slope"] = _reproject_da(slope)
-    pixels["terrain_northness"] = _reproject_da(northness_da)
-    pixels["terrain_flat"] = _reproject_da(flat_da, method=Resampling.average)
+    pixels["terrain_elevation"] = dem.ravel()
+    pixels["terrain_slope"] = slope_deg.ravel()
+    pixels["terrain_northness"] = northness.ravel()
+    pixels["terrain_flat"] = flat_flag.ravel()
 
     pixels.to_parquet(out_path, engine="pyarrow", compression="zstd", index=False)
-    log.info("Saved: %s  shape=%s", out_path, pixels.shape)
+    log.info(f"Saved: {out_path}  shape={pixels.shape}")
 
 
 # ---------------------------------------------------------------------------
-# Section 4: CSB field boundaries (optional Tier 2)
+# Section 4: CSB field boundaries (optional)
 # ---------------------------------------------------------------------------
 
-# National CSB is large (~3.5 GB); cached under ``data/processed/task4/_cache/csb/`` after first run.
-CSB_DEFAULT_URL = (
-    "https://www.nass.usda.gov/Research_and_Science/Crop-Sequence-Boundaries/datasets/"
-    "NationalCSB_2016-2023_rev23.zip"
+CSB_URL = (
+    "https://www.nass.usda.gov/Research_and_Science/Crop-Sequence-Boundaries/"
+    "docs/CSB_2016_2022.zip"
 )
 
 
-def fetch_csb_boundaries(
-    bbox_5070,
-    affine,
-    height,
-    width,
-    out_dir: Path,
-    csb_zip_url: str = CSB_DEFAULT_URL,
-):
-    """Download CSB shapefile ZIP, clip to study area, rasterize field IDs, save parquet."""
+def fetch_csb_boundaries(bbox_5070, affine, height, width, out_dir):
+    """Download CSB shapefile ZIP, clip, rasterize field IDs, save parquet."""
     if not HAS_GPD:
         log.error("geopandas not installed -- skipping CSB")
         return
@@ -639,13 +528,10 @@ def fetch_csb_boundaries(
     zip_path = cache_dir / "csb.zip"
 
     if not zip_path.exists():
-        log.info("Downloading CSB ZIP (may be multi-GB; cached locally) from %s ...", csb_zip_url)
-        with requests.get(csb_zip_url, stream=True, timeout=600) as r:
-            r.raise_for_status()
-            with open(zip_path, "wb") as f:
-                for chunk in r.iter_content(chunk_size=1 << 20):
-                    if chunk:
-                        f.write(chunk)
+        log.info(f"Downloading CSB ZIP from {CSB_URL} ...")
+        r = requests.get(CSB_URL, stream=True, timeout=600)
+        r.raise_for_status()
+        zip_path.write_bytes(r.content)
 
     with zipfile.ZipFile(zip_path) as zf:
         zf.extractall(cache_dir)
@@ -658,7 +544,7 @@ def fetch_csb_boundaries(
     csb = gpd.read_file(shp_files[0]).to_crs("EPSG:5070")
     west, south, east, north = bbox_5070
     csb = csb.cx[west:east, south:north].reset_index(drop=True)
-    log.info("CSB polygons in study area: %s", len(csb))
+    log.info(f"CSB polygons in study area: {len(csb)}")
 
     csb["_fid"] = (csb.index + 1).astype("int32")
     csb["csb_field_area_ha"] = (csb.geometry.area / 10_000).astype("float32")
@@ -667,10 +553,7 @@ def fetch_csb_boundaries(
         (c for c in ["CROPTYPE", "DomCrop", "DOMCROP", "cdl_mode", "CDL_MODE"] if c in csb.columns),
         None,
     )
-    if crop_col:
-        csb["csb_dominant_crop"] = pd.to_numeric(csb[crop_col], errors="coerce").fillna(-1).astype("int16")
-    else:
-        csb["csb_dominant_crop"] = np.int16(-1)
+    csb["csb_dominant_crop"] = csb[crop_col].astype("int16") if crop_col else np.int16(-1)
 
     field_id_arr = rio_rasterize(
         [(geom, fid) for geom, fid in zip(csb.geometry, csb["_fid"])],
@@ -686,7 +569,7 @@ def fetch_csb_boundaries(
     result = pixels.merge(attr, on="_fid", how="left").drop(columns=["_fid"])
 
     result.to_parquet(out_path, engine="pyarrow", compression="zstd", index=False)
-    log.info("Saved: %s  shape=%s", out_path, result.shape)
+    log.info(f"Saved: {out_path}  shape={result.shape}")
 
 
 # ---------------------------------------------------------------------------
@@ -697,106 +580,44 @@ def fetch_csb_boundaries(
 def parse_args():
     p = argparse.ArgumentParser(description="Download and preprocess external features for Task 4 crop mapping.")
     p.add_argument("--soil", action="store_true", help="Fetch gSSURGO soil features")
-    p.add_argument(
-        "--skip-soil",
-        action="store_true",
-        help="Skip gSSURGO (WCS often unavailable; use --soil-mukey-geotiff or prep soil separately)",
-    )
-    p.add_argument(
-        "--soil-mukey-geotiff",
-        type=Path,
-        default=None,
-        help="Local MapunitRaster / MUKEY GeoTIFF to reproject (avoids WCS)",
-    )
-    p.add_argument("--daymet", action="store_true", help="Fetch Daymet V4 climate features")
+    p.add_argument("--daymet", action="store_true", help="Fetch gridMET climate (daymet_* columns)")
     p.add_argument("--terrain", action="store_true", help="Fetch 3DEP terrain features")
     p.add_argument("--csb", action="store_true", help="Fetch CSB field boundaries (optional)")
     p.add_argument(
-        "--csb-zip-url",
-        type=str,
-        default=CSB_DEFAULT_URL,
-        help="NASS Crop Sequence Boundaries ZIP URL (default: national 2016–2023, multi-GB)",
+        "--all",
+        action="store_true",
+        help="Run soil, gridMET climate, and terrain (not CSB; use --csb separately)",
     )
-    p.add_argument("--all", action="store_true", help="Run all fetchers")
+    p.add_argument(
+        "--skip-soil",
+        action="store_true",
+        help="With --all, skip gSSURGO soil (WCS can be flaky)",
+    )
     p.add_argument(
         "--years",
         nargs="+",
         type=int,
         default=DAYMET_YEARS,
-        help="Years for Daymet download (default: 2013-2023)",
+        help="Years for climate download (default: 2013-2023)",
     )
     return p.parse_args()
 
 
 def main():
-    if not META_PATH.is_file():
-        log.error("Missing %s — run CDL parquet + metadata first", META_PATH)
-        sys.exit(1)
     args = parse_args()
-    if args.skip_soil and args.soil:
-        log.error("Use either --soil or --skip-soil, not both")
-        sys.exit(1)
-    if not (args.all or args.soil or args.daymet or args.terrain or args.csb):
-        log.error("Specify --all or one of --soil --daymet --terrain --csb")
-        sys.exit(1)
-
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    transform, height, width, bbox_5070, bbox_wgs84, geom_wgs84, affine = load_grid_meta()
+    _transform, height, width, bbox_5070, bbox_wgs84, _geom_wgs84, affine = load_grid_meta()
 
     run_all = args.all
-    failures: list[str] = []
-
-    def _try(step: str, fn, *a, **kw) -> None:
-        try:
-            fn(*a, **kw)
-        except Exception:
-            log.exception("%s failed", step)
-            failures.append(step)
-            if not run_all:
-                raise
-
-    if (run_all or args.soil) and not args.skip_soil:
-        _try(
-            "gSSURGO soil",
-            fetch_ssurgo_soil,
-            bbox_5070,
-            affine,
-            height,
-            width,
-            OUT_DIR,
-            mukey_geotiff=args.soil_mukey_geotiff,
-        )
-    elif args.skip_soil and run_all:
-        log.warning("Skipping gSSURGO soil (--skip-soil). Tabular join will not be available until soil is built.")
+    if (run_all or args.soil) and not (run_all and args.skip_soil):
+        fetch_ssurgo_soil(bbox_5070, affine, height, width, OUT_DIR)
     if run_all or args.daymet:
-        _try(
-            "Daymet",
-            fetch_daymet_climate,
-            bbox_wgs84,
-            geom_wgs84,
-            affine,
-            height,
-            width,
-            args.years,
-            OUT_DIR,
-        )
+        fetch_gridmet_climate(bbox_wgs84, affine, height, width, args.years, OUT_DIR)
     if run_all or args.terrain:
-        _try("3DEP terrain", fetch_3dep_terrain, bbox_5070, affine, height, width, OUT_DIR)
-    if run_all or args.csb:
-        _try(
-            "CSB boundaries",
-            fetch_csb_boundaries,
-            bbox_5070,
-            affine,
-            height,
-            width,
-            OUT_DIR,
-            csb_zip_url=args.csb_zip_url,
-        )
+        fetch_3dep_terrain(bbox_5070, affine, height, width, OUT_DIR)
+    if args.csb:
+        fetch_csb_boundaries(bbox_5070, affine, height, width, OUT_DIR)
 
-    if failures:
-        log.error("Finished with failures: %s", ", ".join(failures))
-        sys.exit(1)
     log.info("Done.")
 
 

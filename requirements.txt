@@ -39,9 +39,9 @@ xgboost>=2.0
 catboost>=1.2
 shap>=0.45
 
-# ── Task 4 external features (optional; large downloads) ───────────────────
-pydaymet>=0.16
-py3dep>=0.16
+# ── Task 4 external features ───────────────────────────────────────────────
+# scripts/download_external_features.py uses gridMET (OPeNDAP) + USGS 3DEP REST;
+# pydaymet / py3dep / Planetary Computer are not required.
 
 # ── Remote sensing helpers (optional) ─────────────────────────────────────
 # pymodis is not imported by this repo’s core code. It depends on the GDAL
