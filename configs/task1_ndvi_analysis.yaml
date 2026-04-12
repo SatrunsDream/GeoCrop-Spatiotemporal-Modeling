@@ -2,13 +2,23 @@
 # CDL + MODIS NDVI phenology comparison: corn vs. soybean (Corn Belt)
 
 study_area:
-  states: [Iowa, Nebraska]          # U.S. Corn Belt focus
+  states:                            # U.S. Corn Belt
+    - Iowa
+    - Nebraska
+    - Illinois
+    - Indiana
+    - Ohio
+    - Minnesota
+    - Missouri
+    - South Dakota
+    - Wisconsin
+    - Kansas
+    - North Dakota
+    - Kentucky
+    - Michigan
   bbox: null                         # [lon_min, lat_min, lon_max, lat_max] — override states if set
 
-# Single-year mask (used by some scripts / older notebooks). Multi-year phenology
-# notebook uses ``phenology_years`` below, or auto-detects intersection on disk.
 cdl:
-  year: 2022                         # CDL year to use as crop mask
   crop_classes:
     corn: 1
     soybean: 5
@@ -17,16 +27,17 @@ cdl:
 ndvi:
   product: MODIS_NDVI_250m           # CropSmart MODIS NDVI composite
   temporal_resolution: weekly        # daily | weekly
-  year: 2022                         # must match CDL year (single-year workflows)
   growing_season_doy: [100, 310]     # approximate DOY window (mid-April → early Nov)
   data_path: data/raw/ndvi/
 
-# Multi-year phenology (CDL column cdl_{Y} + NDVI file ndvi_weekly_{Y}_wide.parquet).
-# Omit bounds or set null to use every overlapping calendar year on disk.
+# Multi-year phenology: auto-discovers every calendar year on disk that has both a
+# CDL column (cdl_{Y} in cdl_stack_wide.parquet) and an NDVI file
+# (ndvi_weekly_{Y}_wide.parquet). Use year_min/year_max to clip range, or
+# explicit to pick specific years.
 phenology_years:
-  year_min: null                     # e.g. 2013 to clip start
-  year_max: null                     # e.g. 2024 to clip end
-  # explicit: [2018, 2019, 2020, 2021, 2022]  # optional: use only these years (uncomment)
+  year_min: 2008                     # CDL starts at 2008
+  year_max: null                     # null → use latest available
+  # explicit: [2018, 2019, 2020, 2021, 2022]  # optional: override with specific years
 
 purity_filtering:
   threshold: 0.80                    # minimum crop fraction within 250m cell (trusted-pixel approach)
