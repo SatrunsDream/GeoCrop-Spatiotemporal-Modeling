@@ -49,6 +49,7 @@ Long-running memory for humans and agents.
 | `INTERFACES.md` | I/O contracts, expected array shapes, file formats |
 | `STATUS.md` | Current state, completed work, blockers |
 | `RISKS.md` | Known failure modes and mitigations |
+| `TASK2_RESULTS.md` | Task 2 rotation outputs: numbers, interpretation, improvement ideas |
 
 ### data/
 
@@ -142,13 +143,25 @@ artifacts/
 
 | Path | Description |
 |------|-------------|
-| `artifacts/figures/` | *(empty — to be populated)* |
+| `artifacts/figures/task2/task2__cornsoy_fractions_by_year__20260411.png` | CDL corn vs soy fraction by year (processed stack) |
+| `artifacts/figures/task2/task2__ncornsoy_histogram.png` | Ever-pool `n_cornsoy_years` with eligibility cutoff |
+| `artifacts/figures/task2/task2__markov_corn_soy_other.png` | Markov P(to|from) heatmap (corn/soy/other) |
+| `artifacts/figures/task2/task2__metric_histograms.png` | Task 2 rotation metric distributions (eligible pixels) |
+| `artifacts/figures/task2/task2__alt_vs_distance.png` | Alternation vs pattern-distance scatter |
+| `artifacts/figures/task2/task2__threshold_sensitivity_regular_pct.png` | Sensitivity: % regular vs `alternation_min` by `dist_max` |
+| `artifacts/figures/task2/task2__transition_asymmetry.png` | Four-bar P(C→C), P(C→S), P(S→C), P(S→S) (Markov) |
+| `artifacts/figures/task2/task2__runlength_distribution.png` | Discrete max run length (monoculture zone ≥7) |
+| `artifacts/figures/task2/task2__rotation_map__raw__20260411.png` | Rotation class map (raw) |
+| `artifacts/figures/task2/task2__rotation_map__smoothed__20260411.png` | Rotation class map (3×3 smoothed + annotations) |
 
 ### Tables
 
 | Path | Description |
 |------|-------------|
-| `artifacts/tables/` | *(empty — to be populated)* |
+| `artifacts/tables/task2/task2__areal_stats_by_class__20260411.csv` | Areal summary by rotation class (grid ha) |
+| `artifacts/tables/task2/task2__areal_stats_by_class__20260411__metadata.json` | `pixel_area_ha`, ~320 m grid note, CRS, disclaimer vs 30 m CDL |
+| `artifacts/tables/task2/task2__areal_stats_by_region__20260411.csv` | Class % by region (state join or lon proxy) |
+| `artifacts/tables/task2/task2__threshold_sensitivity_grid.csv` | Full `alternation_min` × `pattern_dist_max` class shares |
 
 ### Models
 
@@ -202,39 +215,39 @@ artifacts/
 ### Task 2 — Crop Rotation
 
 #### notebooks/task2_crop_rotation/01_cdl_timeseries_loading.ipynb
-- **Purpose:**
-- **Inputs:**
-- **Outputs:**
-- **Key findings:**
-- **Next steps:**
+- **Purpose:** Load **processed** CDL wide Parquet for 2013–2022; sanity-check grid and corn/soy prevalence by year.
+- **Inputs:** `data/processed/cdl/cdl_stack_wide.parquet`, `cdl_stack_spatial_metadata.json`, `configs/task2_crop_rotation.yaml`
+- **Outputs:** `artifacts/figures/task2/task2__cornsoy_fractions_by_year__*.png`
+- **Key findings:** See `context/TASK2_RESULTS.md` §2–3. Corn/soy fractions vary by year; grid ~1520×2048, EPSG:5070, ~10.2 ha/cell.
+- **Next steps:** Optional five-state vector mask; document study extent in report.
 
 #### notebooks/task2_crop_rotation/02_rotation_metrics_computation.ipynb
-- **Purpose:**
-- **Inputs:**
-- **Outputs:**
-- **Key findings:**
-- **Next steps:**
+- **Purpose:** Metrics on **ever** corn/soy stack; **eligibility** (≥5 corn/soy years); save **eligible-only** `rotation_metrics.parquet`; Markov 3×3; transition-volume printout; asymmetry bar chart; run-length discrete bars; metric plots.
+- **Inputs:** Same CDL Parquet slice; `src.modeling.rotation_classifier`
+- **Outputs:** `rotation_metrics.parquet`, `task2__markov_transition_*.csv`, `task2__ncornsoy_histogram.png`, `task2__transition_asymmetry.png`, `task2__runlength_distribution.png`, metric figures
+- **Key findings:** ~530k ever → **~301k eligible**; median alternation **0.5** on eligible pool; Markov shows sticky corn and soy→corn (`context/TASK2_RESULTS.md`).
+- **Next steps:** Align grid with Iowa+Nebraska if regional narrative is required.
 
 #### notebooks/task2_crop_rotation/03_rotation_classification.ipynb
-- **Purpose:**
-- **Inputs:**
-- **Outputs:**
-- **Key findings:**
-- **Next steps:**
+- **Purpose:** **Threshold sensitivity grid** + **primary** YAML classification; GeoTIFFs.
+- **Inputs:** `rotation_metrics.parquet`, YAML thresholds, spatial metadata JSON
+- **Outputs:** `task2__threshold_sensitivity_grid.csv`, sensitivity figure, `rotation_class_map*.tif`, `rotation_metrics_classified.parquet`
+- **Key findings:** Strict primary **~16–17% regular**, **~27% mono**, **~55–57% irregular** on eligible pixels; relaxed (0.5, 5–6) reaches **~42–44% regular** (see sensitivity CSV).
+- **Next steps:** Report = strict primary + sensitivity figure; cite USDA definitions when comparing.
 
 #### notebooks/task2_crop_rotation/04_spatial_mapping_rotation.ipynb
-- **Purpose:**
-- **Inputs:**
-- **Outputs:**
-- **Key findings:**
-- **Next steps:**
+- **Purpose:** Publication-style maps from classified GeoTIFFs.
+- **Inputs:** Smoothed/raw rotation rasters; optional `data/external/states/`
+- **Outputs:** `artifacts/figures/task2/task2__rotation_map__*__*.png`
+- **Key findings:** Maps include **text annotations**; verify **bbox** before agronomic labels (current stack may lie west of Iowa).
+- **Next steps:** Side-by-side raw vs smoothed in report; adjust annotations if extent changes.
 
 #### notebooks/task2_crop_rotation/05_areal_statistics_export.ipynb
-- **Purpose:**
-- **Inputs:**
-- **Outputs:**
-- **Key findings:**
-- **Next steps:**
+- **Purpose:** Areal CSV + **metadata JSON** (grid ha, CRS, 30 m disclaimer) + **per-region** class shares + run bundle JSON.
+- **Inputs:** Smoothed rotation GeoTIFF; `rotation_metrics_classified.parquet`; spatial metadata
+- **Outputs:** `task2__areal_stats_by_class__*.csv`, `*__metadata.json`, `task2__areal_stats_by_region__*.csv`, `artifacts/logs/runs/*/run_bundle.json`
+- **Key findings:** Total classified footprint **~3.08 × 10⁶ ha** on ~10.2 ha/cell grid; regional split is **degenerate** if the stack lies entirely west of the lon proxy — see `TASK2_RESULTS.md` §0 / §2.6.
+- **Next steps:** Extend bbox or use state polygons that intersect the grid for Iowa vs Nebraska narrative.
 
 ---
 

@@ -6,7 +6,14 @@ Milestone and version log for the GeoCrop NAFSI Track 1 submission.
 
 ## [Unreleased]
 
+### Changed
+- Task 2 notebooks: valid **nbformat** (`execution_count`, cell `id`) for `jupyter nbconvert --execute`; Markov plot uses **matplotlib** only (no **seaborn** import in NB02).
+- `context/TASK2_RESULTS.md` rewritten from **current** parquet / CSV / sensitivity outputs (rotation-eligible denominator, geography caveat, strength assessment).
+- NB02: Markov **volume-by-origin** printout, **asymmetry** four-bar figure (`task2__transition_asymmetry.png`), **run-length** discrete bars (`task2__runlength_distribution.png`). NB03 markdown: **monoculture % invariant** across sensitivity grid. `TASK2_RESULTS.md` §**2.7** documents Findings A–F.
+
 ### Added
+- `context/TASK2_RESULTS.md` — Task 2 rotation run statistics, interpretation, and improvement notes
+- Task 2 implementation: `src/io/cdl_parquet.py`, `rotation_classifier`, `rotation_maps`, processed-CDL notebooks 01–05, `data/processed/task2/` outputs
 - Documentation: `README.md` and `context/` (`structure.md`, `DATASETS.md` §5, `INTERFACES.md`, `PROJECT_BRIEF.md`) describe `data/raw|interim|processed` subfolders (`cdl`, `ndvi`, `smap`) and the download → interim → Parquet scripts
 - Initial repository scaffold with full folder hierarchy
 - Root-level documentation: development_rules.md, structure.md, DECISIONS.md, ASSUMPTIONS.md

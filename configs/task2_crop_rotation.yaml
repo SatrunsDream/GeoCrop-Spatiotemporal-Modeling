@@ -12,6 +12,12 @@ cdl:
     soybean: 5
   data_path: data/raw/cdl/
 
+# Pixels must appear as corn or soy in at least this many years to enter
+# ``rotation_metrics.parquet`` (rotation-eligible denominator). Reduces noise
+# from 1–2 “touch” years in the decade.
+rotation_eligibility:
+  min_cornsoy_years_for_metrics: 5
+
 rotation_metrics:
   alternation_score:
     enabled: true                    # fraction of adjacent-year corn↔soy transitions

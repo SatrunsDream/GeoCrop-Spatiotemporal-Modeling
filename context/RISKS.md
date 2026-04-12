@@ -40,3 +40,8 @@ Known risks, failure modes, and mitigations for the GeoCrop NAFSI Track 1 pipeli
 - **Risk:** Mixing CDL (Albers), NDVI (may be geographic or sinusoidal), and SMAP (EASE-Grid 2.0) projections leads to incorrect spatial overlays.
 - **Severity:** High
 - **Mitigation:** All data reprojected to EPSG:5070 at load time via `src/io/` loaders; centralized in `src/utils/geo_utils.py`.
+
+### RISK-008 — Task 2 study footprint vs Corn Belt narrative
+- **Risk:** The processed CDL stack’s geographic extent may not span eastern Nebraska and Iowa; **longitude proxies** or **map annotations** that assume a two-state split can be **misleading** (e.g. all pixels west of a meridian → one “region” bucket).
+- **Severity:** Medium (communication / reviewer trust)
+- **Mitigation:** Always report **bbox or lon/lat range** from metadata; use **state polygons** that intersect the raster; tie agronomic claims to **actual** footprint (`context/TASK2_RESULTS.md` §0, §2.6).

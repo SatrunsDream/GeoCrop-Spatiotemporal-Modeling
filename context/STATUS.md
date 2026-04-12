@@ -6,8 +6,8 @@ Current state of the project. Updated after each meaningful work session.
 
 ## Current Status
 
-**Date:** 2026-04-10
-**Phase:** Repository scaffold — data folder layout and pipeline scripts documented; task notebooks still mostly stubs
+**Date:** 2026-04-11  
+**Phase:** Task 1–2 pipelines executable; Task 2 rotation **processed-CDL path** complete — notebooks **02–05** run headlessly via `python -m jupyter nbconvert --execute`, artifacts refreshed, interpretation in `context/TASK2_RESULTS.md`.
 
 ## Completed
 
@@ -21,23 +21,22 @@ Current state of the project. Updated after each meaningful work session.
 - [x] `requirements.txt`
 - [x] `.gitignore`
 - [x] `configs/` — YAML configs for all four tasks
-- [x] `context/` — PROJECT_BRIEF, GLOSSARY, DATASETS, INTERFACES, STATUS, RISKS
-- [x] `notebooks/` — task subfolders with 5 stub notebooks each
-- [x] `src/` — full package skeleton (io, preprocessing, modeling, evaluation, viz, utils)
-- [x] `scripts/` — CLI entry-points per task plus `download_data.py`, `build_interim_data.py`, `process_interim_to_parquet.py`
-- [x] `tests/` — unit test stubs + smoke test
-- [x] `artifacts/` — directory hierarchy with .gitkeep files
+- [x] `context/` — PROJECT_BRIEF, GLOSSARY, DATASETS, INTERFACES, STATUS, RISKS, **TASK2_RESULTS**
+- [x] `notebooks/` — task subfolders (Task 2 notebooks wired to **processed** CDL)
+- [x] `src/` — io, preprocessing, modeling (**rotation_classifier**), evaluation, viz (**rotation_maps**), utils
+- [x] `scripts/` — CLI entry-points per task plus `download_data.py`, `build_interim_data.py`, `process_interim_to_parquet.py`, `build_task2_notebooks.py`
+- [x] `tests/` — rotation metric unit tests (`tests/test_rotation_metrics.py`)
+- [x] `artifacts/` — Task 2 figures + CSV under `artifacts/figures/task2/`, `artifacts/tables/task2/`
+- [x] **Task 2:** metrics Parquet, classified Parquet, raw + smoothed rotation GeoTIFFs under `data/processed/task2/`
 
 ## In Progress
 
-- [ ] Task 1: NDVI data ingestion and purity filtering
+- [ ] Task 1: NDVI purity filtering + phenometrics polish (multi-year notebook exists)
 
 ## Pending
 
-- [ ] Task 1: Smoothing + phenometrics extraction
-- [ ] Task 1: Phenological curve visualization and report export
-- [ ] Task 2: Rotation metrics computation and classification
-- [ ] Task 2: Spatial mapping and areal statistics
+- [ ] Task 1: Final phenology figures + report export
+- [x] Task 2: Eligibility filter, threshold sensitivity sweep, Markov matrix, areal metadata JSON, regional table (see `TASK2_RESULTS.md`)
 - [ ] Task 3: SMAP baseline climatology and anomaly maps
 - [ ] Task 3: Agricultural impact interpretation
 - [ ] Task 4: Feature engineering and model training
