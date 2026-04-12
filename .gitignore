@@ -4,6 +4,7 @@ data/interim/
 data/external/*.tif
 data/external/*.h5
 data/external/*.nc
+data/processed/
 
 # ── Python cache ──────────────────────────────────────────────────────────
 __pycache__/
