@@ -9,6 +9,11 @@ Data Layer (CDL)**, **MODIS NDVI**, and **NASA SMAP L4 Soil Moisture** — to
 answer four progressive research questions about crop phenology, rotation
 patterns, soil moisture anomalies, and crop-type prediction.
 
+> **Read the report:**
+> For a complete description of our methodology, results, and discussion, see
+> **[`NAFSI_Predictive_Modeling_for_Agricultural_Resilience.pdf`](NAFSI_Predictive_Modeling_for_Agricultural_Resilience.pdf)**
+> included at the root of this repository.
+
 ---
 
 ## Quick Start
