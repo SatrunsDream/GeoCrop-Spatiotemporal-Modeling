@@ -171,6 +171,31 @@ artifacts/
 | `artifacts/tables/task4/task2__areal_stats_by_county_core4__*.csv` | Same; IL / IN / IA / NE counties only |
 | `artifacts/tables/task2/task2__threshold_sensitivity_grid.csv` | Full `alternation_min` × `pattern_dist_max` class shares |
 
+### Figures — Task 3
+
+| Path | Description |
+|------|-------------|
+| `artifacts/figures/task3/task3__smap_week_histogram_subset_{2019,2022}.png` | SMAP sanity histograms on rotation-eligible pixels (NB01) |
+| `artifacts/figures/task3/task3__midwest_flood_2019__anomaly_map_4panel__20260412.png` | Z-score raster maps at 4 spread ISO weeks (2019 flood) |
+| `artifacts/figures/task3/task3__midwest_flood_2019__anomaly_timeseries_cropland__20260412.png` | Belt-wide mean z ± 1σ time series (2019 flood) |
+| `artifacts/figures/task3/task3__midwest_flood_2019__duration_fraction__20260412.png` | Persistence map: fraction of weeks with z > 1.5 (2019 flood) |
+| `artifacts/figures/task3/task3__midwest_flood_2019__nig_p_drought_4panel__20260412.png` | NIG posterior P(drought) 4-panel (RdYlBu; 2019 flood) |
+| `artifacts/figures/task3/task3__midwest_flood_2019__nig_uncertainty__20260412.png` | NIG posterior predictive scale / epistemic uncertainty (2019 flood) |
+| `artifacts/figures/task3/task3__midwest_flood_2019__zscore_vs_nig_scatter__20260412.png` | Z-score vs −log₁₀(NIG p-value) scatter (2019 flood) |
+| `artifacts/figures/task3/task3__plains_drought_2022__anomaly_map_4panel__20260412.png` | Z-score raster maps at 4 spread ISO weeks (2022 drought) |
+| `artifacts/figures/task3/task3__plains_drought_2022__anomaly_timeseries_cropland__20260412.png` | Belt-wide mean z ± 1σ time series (2022 drought) |
+| `artifacts/figures/task3/task3__plains_drought_2022__duration_fraction__20260412.png` | Persistence map: fraction of weeks with z < −1.5 (2022 drought) |
+| `artifacts/figures/task3/task3__plains_drought_2022__nig_p_drought_4panel__20260412.png` | NIG posterior P(drought) 4-panel (RdYlBu; 2022 drought) |
+| `artifacts/figures/task3/task3__plains_drought_2022__nig_uncertainty__20260412.png` | NIG posterior predictive scale / epistemic uncertainty (2022 drought) |
+| `artifacts/figures/task3/task3__plains_drought_2022__zscore_vs_nig_scatter__20260412.png` | Z-score vs −log₁₀(NIG p-value) scatter (2022 drought) |
+
+### Tables — Task 3
+
+| Path | Description |
+|------|-------------|
+| `artifacts/tables/task3/task3__midwest_flood_2019__anomaly_stats_by_state_crop__20260412.csv` | State × crop anomaly summary with NIG columns (2019 flood) |
+| `artifacts/tables/task3/task3__plains_drought_2022__anomaly_stats_by_state_crop__20260412.csv` | State × crop anomaly summary with NIG columns (2022 drought) |
+
 ### Models
 
 | Path | Description |
@@ -254,32 +279,34 @@ artifacts/
 
 ### Task 3 — Soil Moisture Anomaly (frequentist z-score + NIG Bayesian)
 
-Three notebooks: **data prep → climatology + NIG Bayesian anomalies → maps/tables/bundle**.
+Three notebooks: **data prep → climatology + NIG Bayesian anomalies → maps/tables/bundle**. Full results and interpretation in `context/TASK3_RESULTS.md`.
 
 #### notebooks/task3_soil_moisture/01_pixel_panel_smap_cdl.ipynb
-- **Purpose:** Build the spatial subset: **rotation-eligible** `iy, ix` + **CDL 2019** label; sanity histogram of one SMAP week on that subset.
-- **Inputs:** `data/processed/task2/rotation_metrics.parquet`, `data/processed/cdl/cdl_stack_wide.parquet`, `data/processed/smap/smap_weekly_2019_wide.parquet`
-- **Outputs:** `data/processed/task3/task3_pixel_panel.parquet`, `artifacts/figures/task3/task3__smap_week_histogram_subset.png`
-- **Key findings:** Confirms SMAP Parquet path works **without** interim NetCDF; subset keeps NB02 tractable.
+- **Purpose:** Build the spatial subset: **rotation-eligible** `iy, ix` from Task 2 (~2.08M pixels), attach **per-event-year CDL label** (`cdl_2019`, `cdl_2022`); sanity histograms of one SMAP week per event year on that subset.
+- **Inputs:** `data/processed/task2/rotation_metrics.parquet`, `data/processed/cdl/cdl_stack_wide.parquet`, `data/processed/smap/smap_weekly_{2019,2022}_wide.parquet`
+- **Outputs:** `data/processed/task3/task3_pixel_panel.parquet` (2,084,112 rows), `artifacts/figures/task3/task3__smap_week_histogram_subset_{2019,2022}.png`
+- **Key findings:** Confirms SMAP Parquet path works **without** interim NetCDF; per-event CDL year attachment ensures crop labels match actual planted cover during each event.
 - **Next steps:** Run notebook 02.
 
 #### notebooks/task3_soil_moisture/02_climatology_and_anomalies.ipynb
-- **Purpose:** **ISO week-of-year** μ and σ from **2015–2021** + **NIG conjugate Bayesian** posterior params per (pixel, week); **multi-event** z-scores **and** NIG posterior predictive anomaly scores.
-- **Inputs:** `task3_pixel_panel.parquet`, SMAP wide Parquets + metadata JSONs, `configs/task3_soil_moisture.yaml`
-- **Outputs:** `data/processed/task3/smap_climatology.parquet` (includes `nig_mu_n`, `nig_lam_n`, `nig_alpha_n`, `nig_beta_n`), `data/processed/task3/smap_anomaly_{event_id}.parquet` (includes `z_score`, `nig_p_anomaly`, `nig_p_drought`, `nig_posterior_scale`, `nig_df`).
-- **Key findings:** Student-t posterior predictive with heavier tails for sparse pixels; NIG scores complement the frequentist z-score.
+- **Purpose:** **ISO week-of-year** μ and σ from **2015–2021** baseline (7 years) + **NIG conjugate Bayesian** posterior params per (pixel, week); **multi-event** z-scores **and** NIG posterior predictive anomaly scores.
+- **Inputs:** `task3_pixel_panel.parquet`, SMAP wide Parquets + metadata JSONs for years 2015–2022, `configs/task3_soil_moisture.yaml`
+- **Outputs:** `data/processed/task3/smap_climatology.parquet` (~45.8M rows; includes `nig_mu_n`, `nig_lam_n`, `nig_alpha_n`, `nig_beta_n`), `data/processed/task3/smap_anomaly_midwest_flood_2019.parquet` (37.5M rows), `smap_anomaly_plains_drought_2022.parquet` (27.1M rows) — each with `z_score`, `nig_p_anomaly`, `nig_p_drought`, `nig_posterior_scale`, `nig_df`.
+- **Key findings:** Median posterior df = 11.0, median predictive scale = 0.0454 m³/m³. 2019 flood: median NIG P(drought) = 0.817 (wet-shifted), 0.2% pixel-weeks significant at p < 0.05. 2022 drought: median NIG P(drought) = 0.292 (dry-shifted), 4.9% pixel-weeks significant. Student-t posterior predictive provides conservative anomaly calls appropriate for a 7-year baseline.
 - **Next steps:** Run notebook 03.
 
 #### notebooks/task3_soil_moisture/03_maps_timeseries_tables.ipynb
-- **Purpose:** For each `event_id`: **4-panel** z-score maps, **cropland mean z** time series, **duration** map, **NIG P(drought) 4-panel**, **NIG uncertainty** map, **z-score vs NIG scatter**, **state × crop** CSV (with NIG columns), and `run_bundle.json`.
-- **Inputs:** `smap_anomaly_{event_id}.parquet`, `cdl_stack_spatial_metadata.json`, state boundaries
-- **Outputs:** 6 PNGs per event (`anomaly_map_4panel`, `anomaly_timeseries`, `duration_fraction`, `nig_p_drought_4panel`, `nig_uncertainty`, `zscore_vs_nig_scatter`), CSV with `mean_nig_p_drought` and `frac_pdrought_lt_0p1`, `run_bundle.json`
-- **Key findings:** Contrasts frequentist and Bayesian anomaly surfaces; NIG uncertainty highlights data-sparse regions.
+- **Purpose:** For each `event_id`: **4-panel** z-score maps, **cropland mean z** time series, **duration/persistence** map, **NIG P(drought) 4-panel**, **NIG uncertainty** map, **z-score vs NIG scatter**, **state × crop** CSV (with NIG columns), and `run_bundle.json`.
+- **Inputs:** `smap_anomaly_{event_id}.parquet`, `cdl_stack_spatial_metadata.json`, Corn Belt state boundaries
+- **Outputs:** 6 PNGs per event (12 total) + 2 state × crop CSVs + `run_bundle.json`
+- **Key findings:** 2019 flood — Iowa corn mean z = 0.91, 18% of pixel-weeks z > 1.5; South Dakota strongest wet anomaly (mean z ≈ 1.16). 2022 drought — Kentucky winter wheat hardest hit (mean z = −1.57, 42% pixel-weeks with NIG P(drought) < 0.10); Kansas and Nebraska corn 35–37% severe drought probability. North Dakota anomalously wet during 2022, confirming the drought was Central/Southern Plains–centered. NIG uncertainty map exposes baseline-sparse regions where z-scores should be interpreted cautiously.
 
 #### Source modules
-- `src/modeling/task3_nig_anomaly.py` — NIG posterior params + Student-t predictive scores (pure NumPy/SciPy)
-- `src/modeling/task3_smap_anomalies.py` — frequentist climatology + z-score
-- `src/modeling/task3_aggregate.py` — state × crop summary (z + NIG columns)
+- `src/modeling/task3_nig_anomaly.py` — NIG posterior params + Student-t predictive scores (~113 lines, pure NumPy/SciPy)
+- `src/modeling/task3_smap_anomalies.py` — frequentist climatology + z-score + event anomaly computation
+- `src/modeling/task3_aggregate.py` — state × crop summary with NIG columns, chunked point-in-polygon state join
+- `src/viz/task3_maps.py` — raster fill, z-map plotting, pixel coordinate utilities
+- `src/io/smap_weekly_parquet.py` — SMAP wide Parquet loader, metadata reader, ISO week column resolver
 
 ---
 
@@ -324,10 +351,10 @@ Three notebooks: **data prep → climatology + NIG Bayesian anomalies → maps/t
 
 ## CURRENT STATUS + NEXT STEPS
 
-**Status:** Repository scaffold complete; raw → interim → processed pipeline scripts exist (`download_data.py`, `build_interim_data.py`, `process_interim_to_parquet.py`). Notebooks and most `src/` modules remain stubs until analysis runs.
+**Status (2026-04-12):** Task 2 (crop rotation) and Task 3 (soil moisture anomaly) are **complete** with full notebook pipelines, Bayesian upgrades, artifact exports, and interpretation docs. Task 1 (NDVI phenology) notebooks exist but final figures are pending. Task 4 (crop-type ML) is not started. Raw → interim → processed pipeline scripts are functional.
 
 **Next steps:**
-1. Populate `configs/` with real parameters after initial data exploration
-2. Implement or wire `src/io/` loaders to interim NetCDF / processed Parquet as needed
-3. Begin Task notebook execution in numbered order
-4. Update this file after each notebook run (artifact index, results log)
+1. Task 1: Finalise phenology figures and report export
+2. Task 4: Feature engineering, model training, evaluation, ablation (if time permits before deadline)
+3. PDF report (human-written): integrate figures and tables from Tasks 1–3 (and Task 4 if completed)
+4. Final repository freeze: **2026-04-13 4:00 PM CT**
