@@ -1,5 +1,8 @@
 # Task 1 — NDVI Time Series Analysis by Crop Type
-# CDL + MODIS NDVI phenology comparison: corn vs. soybean (Corn Belt)
+# CDL + MODIS NDVI phenology comparison (Corn Belt)
+#
+# ACTIVE KEYS: cdl.crop_classes, output.*, run.seed
+# The remaining sections document future pipeline extensions.
 
 study_area:
   states:                            # U.S. Corn Belt
@@ -23,6 +26,12 @@ cdl:
     corn: 1
     soybean: 5
     winter_wheat: 24
+    # --- add more crop types here (notebook picks them up automatically) ---
+    # sorghum: 4
+    # spring_wheat: 23
+    # cotton: 2
+    # rice: 3
+    # alfalfa: 36
   data_path: data/raw/cdl/
 
 ndvi:
@@ -40,18 +49,20 @@ phenology_years:
   year_max: null                     # null → use latest available
   # explicit: [2018, 2019, 2020, 2021, 2022]  # optional: override with specific years
 
-purity_filtering:
-  threshold: 0.80                    # minimum crop fraction within 250m cell (trusted-pixel approach)
-  method: dominant_fraction          # dominant_fraction | buffer_inward
+# --- Not yet wired into the notebook (future extensions) ---
 
-smoothing:
-  method: whittaker                  # whittaker | savitzky_golay | timesat_double_logistic | harmonic
-  whittaker_lambda: 100              # smoothing penalty for Whittaker
-  sg_window: 7                       # Savitzky–Golay window length (if used)
-  sg_polyorder: 2
+# purity_filtering:
+#   threshold: 0.80
+#   method: dominant_fraction
 
-phenometrics:
-  extract: [greenup_doy, peak_doy, senescence_doy, peak_ndvi, amplitude, integral, greenup_slope]
+# smoothing:
+#   method: whittaker
+#   whittaker_lambda: 100
+#   sg_window: 7
+#   sg_polyorder: 2
+
+# phenometrics:
+#   extract: [greenup_doy, peak_doy, senescence_doy, peak_ndvi, amplitude, integral, greenup_slope]
 
 output:
   figures_dir: artifacts/figures/task1/

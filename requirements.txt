@@ -64,9 +64,8 @@ python-dotenv>=1.0
 loguru>=0.7
 tabulate>=0.9         # optional: pandas.DataFrame.to_markdown (Task 2 export)
 
-# ── Optional: hierarchical / GP phenology experiments ────────────────────
-# Uncomment if you use JAX/NumPyro in notebooks (heavy; not required for core pipeline).
-# jax>=0.4.28
-# jaxlib>=0.4.28
-# numpyro>=0.15.0
-# optax>=0.2.2
+jax
+jaxlib
+numpyro
+multiprocessing
+yaml
