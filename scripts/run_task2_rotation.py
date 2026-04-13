@@ -1,3 +1,4 @@
+# Disclaimer: Fully AI-generated.
 """
 Task 2 — crop rotation from CDL (NAFSI Track 1).
 

@@ -1,3 +1,4 @@
+# Disclaimer: Fully AI-generated.
 """
 Per-pixel crop rotation metrics and rule-based classification (NAFSI Task 2).
 

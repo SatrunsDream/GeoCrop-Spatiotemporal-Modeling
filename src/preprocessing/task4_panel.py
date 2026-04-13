@@ -1,3 +1,4 @@
+# Disclaimer: Fully AI-generated.
 """
 Task 4 — rolling panel feature construction (CDL + NDVI + SMAP + optional externals).
 

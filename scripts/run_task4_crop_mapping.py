@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Disclaimer: Fully AI-generated.
 """Build Task 4 rolling panel, train LightGBM, evaluate temporal holdout, save artifacts."""
 
 from __future__ import annotations

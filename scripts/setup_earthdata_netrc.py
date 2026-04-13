@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Disclaimer: Fully AI-generated.
 """
 Write ~/.netrc for NASA Earthdata (URS) and OPeNDAP so Daymet THREDDS/OPeNDAP downloads work.
 Both ``urs.earthdata.nasa.gov`` and ``opendap.earthdata.nasa.gov`` use the same login/password.

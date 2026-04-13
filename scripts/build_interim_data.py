@@ -1,3 +1,4 @@
+# Disclaimer: Fully AI-generated.
 """
 build_interim_data.py — Convert raw downloaded GeoTIFFs → interim NetCDF / Parquet.
 

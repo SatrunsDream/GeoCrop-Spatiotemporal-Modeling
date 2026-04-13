@@ -1,3 +1,4 @@
+# Disclaimer: Fully AI-generated.
 """Rotation class map visualization (Task 2)."""
 
 from __future__ import annotations

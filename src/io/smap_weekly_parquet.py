@@ -1,3 +1,4 @@
+# Disclaimer: Fully AI-generated.
 """Load weekly SMAP from processed wide Parquet (Task 3) — no interim NetCDF required."""
 
 from __future__ import annotations

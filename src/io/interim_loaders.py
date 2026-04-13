@@ -1,3 +1,4 @@
+# Disclaimer: Fully AI-generated.
 """
 Load multi-year CDL / NDVI / SMAP stacks from ``data/interim/{cdl,ndvi,smap}/``.
 

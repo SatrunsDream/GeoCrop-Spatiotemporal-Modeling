@@ -1,3 +1,4 @@
+# Disclaimer: Fully AI-generated.
 """
 download_data.py — Scripted WMS GeoTIFF download for all three CropSmart datasets.
 

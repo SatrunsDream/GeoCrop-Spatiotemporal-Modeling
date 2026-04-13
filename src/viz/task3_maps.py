@@ -1,3 +1,4 @@
+# Disclaimer: Fully AI-generated.
 """Raster visualization helpers for Task 3 SMAP anomalies (EPSG:5070 grid)."""
 
 from __future__ import annotations

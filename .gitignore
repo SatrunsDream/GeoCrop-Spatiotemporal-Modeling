@@ -27,6 +27,11 @@ ENV/
 # ── Local AI / editor tooling (do not commit) ─────────────────────────────
 .claude/
 
+# ── Internal project context (not for submission) ─────────────────────────
+context/
+DECISIONS.md
+ASSUMPTIONS.md
+
 # ── Jupyter ───────────────────────────────────────────────────────────────
 .ipynb_checkpoints/
 *.ipynb_checkpoints

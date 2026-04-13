@@ -1,3 +1,4 @@
+# Disclaimer: Fully AI-generated.
 """US Census TIGER/Line county polygons (Corn Belt subset) for Task 2 zonal summaries."""
 
 from __future__ import annotations

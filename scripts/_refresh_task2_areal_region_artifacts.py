@@ -1,3 +1,4 @@
+# Disclaimer: Fully AI-generated.
 """Regenerate Task 2 notebook-04-style per-state CSV + bar chart when boundaries work (e.g. after nbconvert without network)."""
 from __future__ import annotations
 

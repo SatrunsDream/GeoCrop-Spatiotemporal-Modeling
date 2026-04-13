@@ -1,3 +1,4 @@
+# Disclaimer: Fully AI-generated.
 """
 Corn Belt study extent for NAFSI downloads (EPSG:5070).
 

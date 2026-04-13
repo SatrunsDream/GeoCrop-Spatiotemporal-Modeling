@@ -1,3 +1,4 @@
+# Disclaimer: Fully AI-generated.
 """
 Conjugate Dirichlet–Multinomial summaries for corn/soy/other year-to-year transitions (Task 2).
 

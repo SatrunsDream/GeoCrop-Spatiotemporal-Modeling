@@ -1,3 +1,4 @@
+# Disclaimer: Fully AI-generated.
 """SMAP weekly baseline climatology and event-window z-score anomalies (Task 3, Parquet path)."""
 
 from __future__ import annotations

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Disclaimer: Fully AI-generated.
 """
 download_external_features.py — Download and preprocess external features for Task 4.
 

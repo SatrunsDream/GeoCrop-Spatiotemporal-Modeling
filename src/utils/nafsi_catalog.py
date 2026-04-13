@@ -1,3 +1,4 @@
+# Disclaimer: Fully AI-generated.
 """
 NAFSI Track 1 — CropSmart dataset catalog years.
 

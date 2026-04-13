@@ -1,3 +1,4 @@
+# Disclaimer: Fully AI-generated.
 """
 Load multi-year CDL from **processed** wide Parquet (``data/processed/cdl/``).
 

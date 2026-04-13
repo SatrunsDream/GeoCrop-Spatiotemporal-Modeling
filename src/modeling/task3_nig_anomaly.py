@@ -1,3 +1,4 @@
+# Disclaimer: Fully AI-generated.
 """
 Normal-Inverse-Gamma (NIG) conjugate Bayesian anomaly detection for SMAP soil moisture (Task 3).
 

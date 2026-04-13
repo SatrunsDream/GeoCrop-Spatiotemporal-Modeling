@@ -1,3 +1,4 @@
+# Disclaimer: Fully AI-generated.
 """
 Load CDL / NDVI / SMAP stacks from ``data/processed/{cdl,ndvi,smap}/`` wide Parquet.
 

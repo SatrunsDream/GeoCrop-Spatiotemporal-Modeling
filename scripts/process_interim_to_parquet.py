@@ -1,3 +1,4 @@
+# Disclaimer: Fully AI-generated.
 """
 Export geospatial data to Parquet under data/processed/.
 

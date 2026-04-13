@@ -1,3 +1,4 @@
+# Disclaimer: Fully AI-generated.
 """LightGBM crop-type classifier for Task 4 rolling panel."""
 
 from __future__ import annotations

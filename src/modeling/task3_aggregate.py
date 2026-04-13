@@ -1,3 +1,4 @@
+# Disclaimer: Fully AI-generated.
 """Aggregate SMAP anomaly tables by state and CDL crop (Task 3)."""
 
 from __future__ import annotations
