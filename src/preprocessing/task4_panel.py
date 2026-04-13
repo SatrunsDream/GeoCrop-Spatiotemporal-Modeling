@@ -16,6 +16,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 from scipy.ndimage import uniform_filter
+from tqdm.auto import tqdm
 
 # ---------------------------------------------------------------------------
 # Grid / mask
@@ -23,10 +24,47 @@ from scipy.ndimage import uniform_filter
 
 
 def load_grid_meta(repo_root: Path) -> dict[str, Any]:
+    """Load grid metadata (height, width, crs, transform).
+
+    Tries ``cdl_stack_spatial_metadata.json`` first; if absent, derives
+    height/width from the CDL parquet and borrows crs/transform from the
+    first available NDVI yearly metadata JSON.
+    """
     meta_path = repo_root / "data" / "processed" / "cdl" / "cdl_stack_spatial_metadata.json"
-    if not meta_path.is_file():
-        raise FileNotFoundError(meta_path)
-    return json.loads(meta_path.read_text(encoding="utf-8"))
+    if meta_path.is_file():
+        return json.loads(meta_path.read_text(encoding="utf-8"))
+
+    import pyarrow.parquet as pq
+    import pyarrow.compute as pc
+
+    cdl_pq = repo_root / "data" / "processed" / "cdl" / "cdl_stack_wide.parquet"
+    if not cdl_pq.is_file():
+        raise FileNotFoundError(
+            f"Neither {meta_path} nor {cdl_pq} found. "
+            "Run: python scripts/process_interim_to_parquet.py --dataset cdl"
+        )
+
+    table = pq.read_table(cdl_pq, columns=["iy", "ix"])
+    height = int(pc.max(table.column("iy")).as_py()) + 1
+    width = int(pc.max(table.column("ix")).as_py()) + 1
+    years = sorted(
+        int(c.replace("cdl_", ""))
+        for c in pq.read_schema(cdl_pq).names
+        if c.startswith("cdl_")
+    )
+
+    meta: dict[str, Any] = {"height": height, "width": width, "years": years}
+
+    ndvi_dir = repo_root / "data" / "processed" / "ndvi"
+    ndvi_metas = sorted(ndvi_dir.glob("ndvi_weekly_*_metadata.json"))
+    if ndvi_metas:
+        ref = json.loads(ndvi_metas[0].read_text(encoding="utf-8"))
+        meta["crs"] = ref.get("crs", "EPSG:5070")
+        meta["transform"] = ref.get("transform", [])
+
+    meta_path.parent.mkdir(parents=True, exist_ok=True)
+    meta_path.write_text(json.dumps(meta, indent=2), encoding="utf-8")
+    return meta
 
 
 def build_cropland_mask(
@@ -76,8 +114,61 @@ def map_cdl_code_to_label(
     return out
 
 
+def stratified_sample_indices(
+    labels: np.ndarray,
+    sample_n: int,
+    seed: int = 42,
+) -> np.ndarray:
+    """Return row indices for a class-balanced subsample of *sample_n* rows.
+
+    *labels* is a 1-D float array (0/1/2/3/NaN from ``map_cdl_code_to_label``).
+    Rows with NaN labels are excluded.  Each class gets an equal quota
+    (``sample_n // n_classes``); if a class has fewer rows than its quota, all
+    its rows are taken and the surplus is redistributed to the remaining classes.
+    """
+    rng = np.random.RandomState(seed)
+    valid_mask = np.isfinite(labels)
+    valid_idx = np.where(valid_mask)[0]
+    valid_labels = labels[valid_idx].astype(np.int32)
+
+    classes = np.unique(valid_labels)
+    n_classes = len(classes)
+    if n_classes == 0 or sample_n <= 0:
+        return valid_idx
+
+    if len(valid_idx) <= sample_n:
+        return valid_idx
+
+    per_class = {c: np.where(valid_labels == c)[0] for c in classes}
+
+    quota = sample_n // n_classes
+    chosen: list[np.ndarray] = []
+    surplus = 0
+    small_classes: list[int] = []
+    large_classes: list[int] = []
+
+    for c in classes:
+        pool = per_class[c]
+        if len(pool) <= quota:
+            chosen.append(pool)
+            surplus += quota - len(pool)
+            small_classes.append(c)
+        else:
+            large_classes.append(c)
+
+    extra_each = surplus // max(len(large_classes), 1)
+    remainder = surplus - extra_each * len(large_classes)
+    for i, c in enumerate(large_classes):
+        pool = per_class[c]
+        n_take = quota + extra_each + (1 if i < remainder else 0)
+        chosen.append(rng.choice(pool, size=min(n_take, len(pool)), replace=False))
+
+    local_idx = np.concatenate(chosen)
+    return valid_idx[local_idx]
+
+
 # ---------------------------------------------------------------------------
-# CDL history (per target year t, prior years only)
+# CDL history (per target year t, prior years only) — fully vectorized
 # ---------------------------------------------------------------------------
 
 
@@ -86,61 +177,94 @@ def _history_year_list(available: list[int], t: int, lookback: int) -> list[int]
     return prior[-lookback:] if len(prior) >= lookback else prior
 
 
-def _max_run_length(seq: np.ndarray) -> int:
-    if seq.size == 0:
-        return 0
-    m = 1
-    cur = 1
-    for i in range(1, len(seq)):
-        if seq[i] == seq[i - 1] and seq[i] >= 0:
-            cur += 1
-            m = max(m, cur)
-        else:
-            cur = 1
-    return int(m)
+def _vec_max_run_length(X: np.ndarray) -> np.ndarray:
+    """Vectorized max consecutive run of identical values (where >= 0).
+
+    X : (n_pixels, n_years) int32.  Returns (n_pixels,) int32.
+    Loops over the time axis (~10 iters) instead of the pixel axis (~48M).
+    """
+    n, L = X.shape
+    if L == 0:
+        return np.zeros(n, dtype=np.int32)
+    valid_first = X[:, 0] >= 0
+    current = np.where(valid_first, 1, 0).astype(np.int32)
+    result = current.copy()
+    for j in range(1, L):
+        same_and_valid = (X[:, j] == X[:, j - 1]) & (X[:, j] >= 0)
+        current = np.where(
+            same_and_valid,
+            current + 1,
+            np.where(X[:, j] >= 0, 1, 0),
+        )
+        result = np.maximum(result, current)
+    return result
 
 
-def _alternation_score(seq: np.ndarray) -> float:
-    if len(seq) < 2:
-        return 0.0
-    a, b = seq[:-1], seq[1:]
+def _vec_time_since(newest_first: np.ndarray, code: int) -> np.ndarray:
+    """Vectorized time-since-last for a given crop code.
+
+    newest_first : (n, L) ordered t-1, t-2, …
+    Returns (n,) float32, NaN where the code never appears.
+    """
+    matches = newest_first == code
+    idx = np.argmax(matches, axis=1)
+    found = matches[np.arange(len(matches)), idx]
+    result = idx.astype(np.float32)
+    result[~found] = np.nan
+    return result
+
+
+def _vec_alternation_score(X: np.ndarray) -> np.ndarray:
+    """Vectorized corn/soy alternation score.  X : (n, L) int32."""
+    if X.shape[1] < 2:
+        return np.zeros(X.shape[0], dtype=np.float32)
+    a, b = X[:, :-1], X[:, 1:]
     valid = ((a == 1) | (a == 5)) & ((b == 1) | (b == 5))
-    n_valid = int(valid.sum())
-    if n_valid == 0:
-        return 0.0
-    switches = int(((a == 1) & (b == 5) | ((a == 5) & (b == 1)))[valid].sum())
-    return switches / max(n_valid, 1)
+    switches = (((a == 1) & (b == 5)) | ((a == 5) & (b == 1))) & valid
+    n_valid = valid.sum(axis=1).astype(np.float32)
+    safe_denom = np.maximum(n_valid, 1)
+    return np.where(n_valid > 0, switches.sum(axis=1) / safe_denom, 0.0).astype(np.float32)
 
 
-def _pattern_distance(seq: np.ndarray, pattern_len: int = 10) -> float:
-    s = np.asarray(seq[-pattern_len:], dtype=np.float64)
-    if s.size < pattern_len:
-        pad = np.repeat(s[:1] if s.size else np.array([-1.0]), pattern_len - s.size)
-        s = np.concatenate([pad, s]) if s.size else np.full(pattern_len, -1.0)
-    alt1 = np.array([1 if i % 2 == 0 else 5 for i in range(pattern_len)], dtype=np.float64)
-    alt2 = np.array([5 if i % 2 == 0 else 1 for i in range(pattern_len)], dtype=np.float64)
-    # non corn/soy positions count as mismatch
-    def ham(u):
-        return float(np.sum((s != u) & (s >= 0)))
+def _vec_pattern_distance(X: np.ndarray, pattern_len: int = 10) -> np.ndarray:
+    """Vectorized hamming distance to canonical corn-soy alternations.
 
-    return min(ham(alt1), ham(alt2))
+    X : (n, L) int32.  Returns (n,) float32.
+    """
+    L = X.shape[1]
+    S = X[:, -pattern_len:] if L >= pattern_len else X
+    cur_len = S.shape[1]
+    if cur_len < pattern_len:
+        pad_width = pattern_len - cur_len
+        first_col = S[:, :1] if cur_len > 0 else np.full((S.shape[0], 1), -1, dtype=S.dtype)
+        S = np.concatenate([np.repeat(first_col, pad_width, axis=1), S], axis=1)
 
-
-def _sequence_entropy(seq: np.ndarray) -> float:
-    s = seq[seq >= 0]
-    if s.size == 0:
-        return 0.0
-    _, counts = np.unique(s, return_counts=True)
-    p = counts.astype(np.float64) / counts.sum()
-    return float(-np.sum(p * np.log(p + 1e-12)))
+    alt1 = np.tile(np.array([1, 5], dtype=np.int32), (pattern_len + 1) // 2)[:pattern_len]
+    alt2 = np.tile(np.array([5, 1], dtype=np.int32), (pattern_len + 1) // 2)[:pattern_len]
+    valid = S >= 0
+    ham1 = ((S != alt1[None, :]) & valid).sum(axis=1)
+    ham2 = ((S != alt2[None, :]) & valid).sum(axis=1)
+    return np.minimum(ham1, ham2).astype(np.float32)
 
 
-def _time_since_code(seq_rev: np.ndarray, code: int) -> float:
-    """seq_rev: newest first (t-1, t-2, …)."""
-    for i, v in enumerate(seq_rev):
-        if v == code:
-            return float(i)
-    return np.nan
+def _vec_sequence_entropy(X: np.ndarray) -> np.ndarray:
+    """Vectorized Shannon entropy of crop-code sequences.
+
+    X : (n, L) int32.  Returns (n,) float32.
+    Loops over unique codes (~62 iters) instead of pixels (~48M).
+    """
+    valid = X >= 0
+    valid_counts = valid.sum(axis=1).astype(np.float64)
+    result = np.zeros(X.shape[0], dtype=np.float64)
+    codes_present = np.unique(X[valid])
+    codes_present = codes_present[codes_present >= 0]
+    for code in codes_present:
+        count = ((X == code) & valid).sum(axis=1).astype(np.float64)
+        p = count / np.maximum(valid_counts, 1)
+        mask = p > 0
+        result[mask] -= (p[mask] * np.log(p[mask] + 1e-12))
+    result[valid_counts == 0] = 0.0
+    return result.astype(np.float32)
 
 
 def compute_cdl_history_features(
@@ -152,9 +276,7 @@ def compute_cdl_history_features(
     height: int = 1520,
     width: int = 2048,
 ) -> pd.DataFrame:
-    """
-    ``sub`` is merged mask+CDL rows. Adds CDL history columns for target panel year ``t``.
-    """
+    """Vectorized CDL history features for target panel year *t*."""
     hy = _history_year_list(available_years, t, lookback)
     if not hy:
         raise ValueError(f"No history years before t={t}")
@@ -162,7 +284,6 @@ def compute_cdl_history_features(
     X = sub[col_y].values.astype(np.int32)
     n = X.shape[0]
     L = X.shape[1]
-    # oldest → newest along axis 1 (hy sorted ascending)
     newest_first = X[:, ::-1]
 
     rows: dict[str, np.ndarray] = {
@@ -172,25 +293,22 @@ def compute_cdl_history_features(
     for k in range(1, min(lag_n, L) + 1):
         rows[f"cdl_t{k}"] = X[:, L - k].astype(np.int32)
 
-    # transitions (full history order oldest→newest)
     rows["n_corn_to_soy"] = np.sum((X[:, :-1] == 1) & (X[:, 1:] == 5), axis=1).astype(np.int32)
     rows["n_soy_to_corn"] = np.sum((X[:, :-1] == 5) & (X[:, 1:] == 1), axis=1).astype(np.int32)
     rows["n_corn_corn"] = np.sum((X[:, :-1] == 1) & (X[:, 1:] == 1), axis=1).astype(np.int32)
     rows["n_soy_soy"] = np.sum((X[:, :-1] == 5) & (X[:, 1:] == 5), axis=1).astype(np.int32)
 
-    tsc = np.array([_time_since_code(newest_first[i], 1) for i in range(n)], dtype=np.float32)
-    tss = np.array([_time_since_code(newest_first[i], 5) for i in range(n)], dtype=np.float32)
-    rows["time_since_last_corn"] = tsc
-    rows["time_since_last_soy"] = tss
+    rows["time_since_last_corn"] = _vec_time_since(newest_first, 1)
+    rows["time_since_last_soy"] = _vec_time_since(newest_first, 5)
 
     rows["frac_years_corn"] = np.mean(X == 1, axis=1).astype(np.float32)
     rows["frac_years_soy"] = np.mean(X == 5, axis=1).astype(np.float32)
-    rows["max_run_length"] = np.array([_max_run_length(X[i]) for i in range(n)], dtype=np.int32)
-    rows["alternation_score"] = np.array([_alternation_score(X[i]) for i in range(n)], dtype=np.float32)
-    rows["pattern_distance"] = np.array([_pattern_distance(X[i]) for i in range(n)], dtype=np.float32)
-    rows["sequence_entropy"] = np.array([_sequence_entropy(X[i]) for i in range(n)], dtype=np.float32)
+    rows["max_run_length"] = _vec_max_run_length(X)
+    rows["alternation_score"] = _vec_alternation_score(X)
+    rows["pattern_distance"] = _vec_pattern_distance(X)
+    rows["sequence_entropy"] = _vec_sequence_entropy(X)
 
-    # 3×3 neighborhood of frac (grid)
+    # 3x3 neighbourhood fractions (already vectorized via scipy)
     fc = np.full((height, width), np.nan, dtype=np.float32)
     fs = np.full((height, width), np.nan, dtype=np.float32)
     iy, ix = sub["iy"].values, sub["ix"].values
@@ -198,7 +316,6 @@ def compute_cdl_history_features(
     fs[iy, ix] = rows["frac_years_soy"]
     fc_f = uniform_filter(np.nan_to_num(fc, nan=0.0), size=3, mode="nearest")
     fs_f = uniform_filter(np.nan_to_num(fs, nan=0.0), size=3, mode="nearest")
-    # re-normalize: uniform_filter on zeros padded - approximate; mask valid by count
     rows["neigh_frac_corn"] = fc_f[iy, ix].astype(np.float32)
     rows["neigh_frac_soy"] = fs_f[iy, ix].astype(np.float32)
 
@@ -240,23 +357,18 @@ def compute_ndvi_features(
     mean = np.nanmean(M, axis=1)
     integral = np.nansum(np.maximum(0.0, M - base[:, None]), axis=1)
 
-    # 3-week smooth along time
-    ker = np.ones(3, dtype=np.float32) / 3.0
+    # 3-week uniform smooth along time (vectorized across all pixels)
     pad = np.pad(M, ((0, 0), (1, 1)), mode="edge")
-    smooth = np.stack(
-        [np.convolve(pad[i], ker, mode="valid") for i in range(M.shape[0])],
-        axis=0,
-    )
+    smooth = (pad[:, :-2] + pad[:, 1:-1] + pad[:, 2:]) / np.float32(3.0)
     peak_w = np.nanargmax(smooth, axis=1).astype(np.float32)
     thr = base + 0.2 * amp
-    greenup = np.full(M.shape[0], np.nan, dtype=np.float32)
     diffs = np.diff(smooth, axis=1, prepend=smooth[:, :1])
     inc = np.maximum(0.0, diffs)
     greenup_slope = np.nanmax(inc, axis=1)
     n = M.shape[1]
-    for i in range(M.shape[0]):
-        crossed = np.where(smooth[i] >= thr[i])[0]
-        greenup[i] = float(crossed[0]) if crossed.size else np.nan
+    above_thr = smooth >= thr[:, None]
+    greenup = np.argmax(above_thr, axis=1).astype(np.float32)
+    greenup[~above_thr.any(axis=1)] = np.nan
     i0, i1 = 0, min(7, n)
     i2, i3 = min(7, n), min(16, n)
     i4, i5 = min(16, n), n
@@ -308,7 +420,7 @@ def _smap_gs_features_for_cell_block(
     hist_gs: dict[tuple[int, int], list[np.ndarray]] | None,
     t: int,
 ) -> pd.DataFrame:
-    """smap_px: rows indexed by pixel with iy, ix and w* columns."""
+    """Vectorized SMAP growing-season features."""
     wcols = sorted(
         [c for c in smap_px.columns if c.startswith("w")],
         key=lambda x: int(x[1:]),
@@ -321,25 +433,56 @@ def _smap_gs_features_for_cell_block(
     smap_mean_gs = np.nanmean(gs, axis=1).astype(np.float32)
     smap_spring_sm = np.nanmean(spr, axis=1).astype(np.float32)
 
-    wet = np.zeros(len(smap_px), dtype=np.float32)
-    dry = np.zeros(len(smap_px), dtype=np.float32)
+    n_px = len(smap_px)
+    wet = np.zeros(n_px, dtype=np.float32)
+    dry = np.zeros(n_px, dtype=np.float32)
+
     siy = (smap_px["iy"].values // 28).astype(np.int32)
     six = (smap_px["ix"].values // 28).astype(np.int32)
-    for i in range(len(smap_px)):
-        g = gs[i]
-        g = g[np.isfinite(g)]
-        if g.size == 0:
-            continue
-        key = (int(siy[i]), int(six[i]))
-        if hist_gs is not None and key in hist_gs and len(hist_gs[key]) > 0:
-            pooled = np.concatenate(hist_gs[key])
-            p80 = np.nanpercentile(pooled, 80)
-            p20 = np.nanpercentile(pooled, 20)
+    cell_id = siy.astype(np.int64) * 100_000 + six.astype(np.int64)
+
+    if hist_gs is not None and len(hist_gs) > 0:
+        hist_p80 = {}
+        hist_p20 = {}
+        for key, arrs in hist_gs.items():
+            if arrs:
+                pooled = np.concatenate(arrs)
+                hist_p80[key] = np.nanpercentile(pooled, 80)
+                hist_p20[key] = np.nanpercentile(pooled, 20)
+        if hist_p80:
+            unique_cells = np.unique(cell_id)
+            p80_arr = np.full(n_px, np.nan, dtype=np.float32)
+            p20_arr = np.full(n_px, np.nan, dtype=np.float32)
+            for uc in unique_cells:
+                c_siy = int(uc // 100_000)
+                c_six = int(uc % 100_000)
+                key = (c_siy, c_six)
+                mask = cell_id == uc
+                if key in hist_p80:
+                    p80_arr[mask] = hist_p80[key]
+                    p20_arr[mask] = hist_p20[key]
+            has_hist = np.isfinite(p80_arr)
         else:
-            p80 = np.nanpercentile(g, 80)
-            p20 = np.nanpercentile(g, 20)
-        wet[i] = float(np.mean(g > p80)) if g.size else np.nan
-        dry[i] = float(np.mean(g < p20)) if g.size else np.nan
+            has_hist = np.zeros(n_px, dtype=bool)
+    else:
+        has_hist = np.zeros(n_px, dtype=bool)
+
+    gs_valid_count = np.sum(np.isfinite(gs), axis=1)
+    has_data = gs_valid_count > 0
+
+    if has_hist.any():
+        m = has_hist & has_data
+        gs_m = gs[m]
+        wet[m] = np.nanmean(gs_m > p80_arr[m, None], axis=1).astype(np.float32)
+        dry[m] = np.nanmean(gs_m < p20_arr[m, None], axis=1).astype(np.float32)
+
+    no_hist = ~has_hist & has_data
+    if no_hist.any():
+        gs_nh = gs[no_hist]
+        p80_local = np.nanpercentile(gs_nh, 80, axis=1)
+        p20_local = np.nanpercentile(gs_nh, 20, axis=1)
+        wet[no_hist] = np.nanmean(gs_nh > p80_local[:, None], axis=1).astype(np.float32)
+        dry[no_hist] = np.nanmean(gs_nh < p20_local[:, None], axis=1).astype(np.float32)
 
     return pd.DataFrame(
         {
@@ -366,9 +509,15 @@ def update_smap_cell_history(
     gs = M[:, lo : hi + 1]
     siy = (smap_px["iy"].values // 28).astype(np.int32)
     six = (smap_px["ix"].values // 28).astype(np.int32)
-    for i in range(len(smap_px)):
-        key = (int(siy[i]), int(six[i]))
-        hist.setdefault(key, []).append(gs[i].flatten())
+    cell_id = siy.astype(np.int64) * 100_000 + six.astype(np.int64)
+    unique_cells = np.unique(cell_id)
+    for uc in unique_cells:
+        c_siy = int(uc // 100_000)
+        c_six = int(uc % 100_000)
+        key = (c_siy, c_six)
+        mask = cell_id == uc
+        block = gs[mask].flatten()
+        hist.setdefault(key, []).append(block)
 
 
 # ---------------------------------------------------------------------------
@@ -415,6 +564,9 @@ def assemble_training_panel(
     lookback = int(cfg["cdl"]["history_lookback_years"])
     lag_n = int(cfg["cdl"]["lag_codes"])
 
+    sample_n = cfg["panel"].get("sample_per_year") or 0
+    seed = int(cfg.get("run", {}).get("seed", 42))
+
     ndvi_dir = repo_root / cfg["ndvi"]["source_dir"]
     smap_dir = repo_root / cfg["smap"]["source_dir"]
     ndvi_scale = float(cfg["ndvi"]["scale_to_physical"])
@@ -426,16 +578,26 @@ def assemble_training_panel(
     ndvi_peak_cache: dict[int, pd.DataFrame] = {}
     ndvi_pkw_cache: dict[int, pd.DataFrame] = {}
 
+    sub_full = mask.merge(cdl, on=["iy", "ix"], how="left")
+
+    year_range = [t for t in range(year_lo, year_hi + 1) if f"cdl_{t}" in sub_full.columns]
     parts: list[pd.DataFrame] = []
-    for t in range(year_lo, year_hi + 1):
-        sub = mask.merge(cdl, on=["iy", "ix"], how="left")
-        if f"cdl_{t}" not in sub.columns:
-            continue
+    pbar = tqdm(year_range, desc="Building training panel", unit="yr")
+    for t in pbar:
+        y_raw = sub_full[f"cdl_{t}"].values
+        label = map_cdl_code_to_label(y_raw, corn, soy, wheat, cropland_max)
+
+        if sample_n > 0:
+            keep = stratified_sample_indices(label, sample_n, seed=seed + t)
+            sub = sub_full.iloc[keep].reset_index(drop=True)
+            label = label[keep]
+        else:
+            sub = sub_full
+
+        pbar.set_postfix(year=t, pixels=f"{len(sub):,}")
         hist_df = compute_cdl_history_features(
             sub, t, available_years, lookback=lookback, lag_n=lag_n, height=H, width=W
         )
-        y_raw = sub[f"cdl_{t}"].values
-        label = map_cdl_code_to_label(y_raw, corn, soy, wheat, cropland_max)
         hist_df["label"] = label.astype(np.float32)
         hist_df["year"] = np.int32(t)
 
@@ -499,27 +661,29 @@ def assemble_training_panel(
             ):
                 hist_df[c] = np.float32(np.nan)
 
-        # optional external joins
-        for _name, key in (
-            ("soil", cfg["external"]["soil_parquet"]),
-            ("terrain", cfg["external"]["terrain_parquet"]),
-        ):
-            p = repo_root / key
-            if p.is_file():
-                ex = pd.read_parquet(p)
-                hist_df = hist_df.merge(ex, on=["iy", "ix"], how="left")
+        ext = cfg.get("external", {})
+        if ext:
+            for _name, key in (
+                ("soil", ext.get("soil_parquet", "")),
+                ("terrain", ext.get("terrain_parquet", "")),
+            ):
+                if key:
+                    p = repo_root / key
+                    if p.is_file():
+                        hist_df = hist_df.merge(pd.read_parquet(p), on=["iy", "ix"], how="left")
 
-        daymet_pat = cfg["external"]["daymet_glob"]
-        dp = Path(str(daymet_pat).format(year=t))
-        dp = repo_root / dp if not dp.is_absolute() else dp
-        if dp.is_file():
-            dm = pd.read_parquet(dp)
-            hist_df = hist_df.merge(dm, on=["iy", "ix"], how="left")
+            daymet_pat = ext.get("daymet_glob", "")
+            if daymet_pat:
+                dp = Path(str(daymet_pat).format(year=t))
+                dp = repo_root / dp if not dp.is_absolute() else dp
+                if dp.is_file():
+                    hist_df = hist_df.merge(pd.read_parquet(dp), on=["iy", "ix"], how="left")
 
-        cp = repo_root / cfg["external"]["csb_parquet"]
-        if cp.is_file():
-            csb = pd.read_parquet(cp)
-            hist_df = hist_df.merge(csb, on=["iy", "ix"], how="left")
+            csb = ext.get("csb_parquet", "")
+            if csb:
+                cp = repo_root / csb
+                if cp.is_file():
+                    hist_df = hist_df.merge(pd.read_parquet(cp), on=["iy", "ix"], how="left")
 
         parts.append(hist_df)
 
@@ -543,6 +707,10 @@ def build_test_year_frame(repo_root: Path, cfg: dict[str, Any], year: int) -> pd
     cdl_path = repo_root / cfg["cdl"]["data_path"]
     meta = load_grid_meta(repo_root)
     H, W = int(meta["height"]), int(meta["width"])
+
+    steps = tqdm(total=5, desc=f"Test year {year}", unit="step")
+
+    steps.set_postfix_str("loading CDL & building mask")
     cdl = pd.read_parquet(cdl_path)
     available_years = sorted(
         int(c.replace("cdl_", "")) for c in cdl.columns if c.startswith("cdl_")
@@ -555,19 +723,38 @@ def build_test_year_frame(repo_root: Path, cfg: dict[str, Any], year: int) -> pd
         cropland_max=cfg["target_classes"]["cropland_max_code"],
         min_cropland_years=cfg["cdl"]["min_cropland_years_in_mask"],
     )
-    sub = mask.merge(cdl, on=["iy", "ix"], how="left")
+    sub_full = mask.merge(cdl, on=["iy", "ix"], how="left")
+    del cdl, mask
+
+    sample_n = cfg["panel"].get("sample_per_year") or 0
+    seed = int(cfg.get("run", {}).get("seed", 42))
+    tc = cfg["target_classes"]
+    y_raw = sub_full[f"cdl_{year}"].values
+    label = map_cdl_code_to_label(
+        y_raw, tc["corn"], tc["soybean"], tc["winter_wheat"], tc["cropland_max_code"]
+    )
+    if sample_n > 0 and len(sub_full) > sample_n:
+        keep = stratified_sample_indices(label, sample_n, seed=seed)
+        sub = sub_full.iloc[keep].reset_index(drop=True)
+        label = label[keep]
+        del sub_full
+        steps.set_postfix_str(f"sampled {len(sub):,} pixels")
+    else:
+        sub = sub_full
+        del sub_full
+    steps.update(1)
+
+    steps.set_postfix_str("CDL history features")
     lookback = int(cfg["cdl"]["history_lookback_years"])
     lag_n = int(cfg["cdl"]["lag_codes"])
     hist_df = compute_cdl_history_features(
         sub, year, available_years, lookback=lookback, lag_n=lag_n, height=H, width=W
     )
-    tc = cfg["target_classes"]
-    y_raw = sub[f"cdl_{year}"].values
-    hist_df["label"] = map_cdl_code_to_label(
-        y_raw, tc["corn"], tc["soybean"], tc["winter_wheat"], tc["cropland_max_code"]
-    ).astype(np.float32)
+    steps.update(1)
+    hist_df["label"] = label.astype(np.float32)
     hist_df["year"] = np.int32(year)
 
+    steps.set_postfix_str("NDVI features")
     ndvi_dir = repo_root / cfg["ndvi"]["source_dir"]
     ndvi_path = ndvi_dir / f"ndvi_weekly_{year}_wide.parquet"
     ndvi_scale = float(cfg["ndvi"]["scale_to_physical"])
@@ -578,18 +765,21 @@ def build_test_year_frame(repo_root: Path, cfg: dict[str, Any], year: int) -> pd
         for c in ndvi_feat.columns:
             hist_df[c] = ndvi_feat[c].values
         prior_years = [y for y in range(cfg["panel"]["train_years"][0], year) if y >= 2000]
+        pixel_keys = hist_df[["iy", "ix"]]
         pk_cols = []
-        for y in prior_years:
+        for y in tqdm(prior_years, desc="NDVI history (test year)", unit="yr", leave=False):
             pp = ndvi_dir / f"ndvi_weekly_{y}_wide.parquet"
             if not pp.is_file():
                 continue
             o = pd.read_parquet(pp)
+            o = pixel_keys.merge(o, on=["iy", "ix"], how="inner")
             wonly = [c for c in o.columns if c.startswith("w")]
             o = o[["iy", "ix"] + wonly]
             feats = compute_ndvi_features(o, scale=ndvi_scale)
             o2 = pd.concat([o[["iy", "ix"]], feats[["ndvi_peak", "ndvi_peak_week"]]], axis=1)
             o2 = o2.rename(columns={"ndvi_peak": f"_pk{y}", "ndvi_peak_week": f"_pkw{y}"})
             pk_cols.append((y, o2))
+            del o, feats
         if pk_cols:
             base = hist_df[["iy", "ix"]].copy()
             for _, o2 in pk_cols:
@@ -608,6 +798,8 @@ def build_test_year_frame(repo_root: Path, cfg: dict[str, Any], year: int) -> pd
             for k, v in var.items():
                 hist_df[k] = v
 
+    steps.update(1)
+    steps.set_postfix_str("SMAP features")
     smap_dir = repo_root / cfg["smap"]["source_dir"]
     w_lo, w_hi = cfg["smap"]["growing_season_weeks"]
     sp_lo, sp_hi = cfg["smap"]["spring_weeks"]
@@ -630,17 +822,29 @@ def build_test_year_frame(repo_root: Path, cfg: dict[str, Any], year: int) -> pd
             "smap_pct_dry_weeks",
         ):
             hist_df[c] = np.float32(np.nan)
+    steps.update(1)
 
-    for key in ("soil_parquet", "terrain_parquet"):
-        p = repo_root / cfg["external"][key]
-        if p.is_file():
-            hist_df = hist_df.merge(pd.read_parquet(p), on=["iy", "ix"], how="left")
-    dp = Path(str(cfg["external"]["daymet_glob"]).format(year=year))
-    dp = repo_root / dp if not dp.is_absolute() else dp
-    if dp.is_file():
-        hist_df = hist_df.merge(pd.read_parquet(dp), on=["iy", "ix"], how="left")
-    cp = repo_root / cfg["external"]["csb_parquet"]
-    if cp.is_file():
-        hist_df = hist_df.merge(pd.read_parquet(cp), on=["iy", "ix"], how="left")
+    steps.set_postfix_str("external joins")
+    ext = cfg.get("external", {})
+    if ext:
+        for key in ("soil_parquet", "terrain_parquet"):
+            val = ext.get(key, "")
+            if val:
+                p = repo_root / val
+                if p.is_file():
+                    hist_df = hist_df.merge(pd.read_parquet(p), on=["iy", "ix"], how="left")
+        daymet_pat = ext.get("daymet_glob", "")
+        if daymet_pat:
+            dp = Path(str(daymet_pat).format(year=year))
+            dp = repo_root / dp if not dp.is_absolute() else dp
+            if dp.is_file():
+                hist_df = hist_df.merge(pd.read_parquet(dp), on=["iy", "ix"], how="left")
+        csb = ext.get("csb_parquet", "")
+        if csb:
+            cp = repo_root / csb
+            if cp.is_file():
+                hist_df = hist_df.merge(pd.read_parquet(cp), on=["iy", "ix"], how="left")
+    steps.update(1)
+    steps.close()
 
     return hist_df

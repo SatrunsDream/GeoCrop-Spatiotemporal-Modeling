@@ -1,9 +1,12 @@
-# Task 4 — Rolling panel + LightGBM (NAFSI Track 1)
-# Temporal split: train year<=2021, val=2022, test=2023 (panel rows include2013–2022 for train/val)
+# Task 4 — Crop Type Classification (LightGBM)
+# CDL history + NDVI phenology + SMAP soil moisture → crop type prediction
+#
+# ACTIVE KEYS: target_classes, cdl, panel, ndvi, smap, model, validation,
+#              feature_importance, ablations, output, run
+# Temporal split: train years ≤ 2021, val = 2022, test = 2023
 
 study_area:
-  # Same 13-state Corn Belt as task2 / study_extent.yaml
-  states:
+  states:                              # U.S. Corn Belt (13 states)
     - Illinois
     - Indiana
     - Iowa
@@ -17,7 +20,7 @@ study_area:
     - Ohio
     - South Dakota
     - Wisconsin
-  bbox: null
+  bbox: null                           # [lon_min, lat_min, lon_max, lat_max] — override states if set
 
 # Model labels (integer): 0=other_cropland, 1=corn, 2=soy, 3=winter_wheat
 target_classes:
@@ -39,11 +42,12 @@ panel:
   train_split_max_year: 2021
   val_year: 2022
   test_year: 2023
+  sample_per_year: 500000              # null or 0 to use all pixels
 
 ndvi:
   source_dir: data/processed/ndvi/
   scale_to_physical: 250.0
-  week_cols_pattern: "w"  # w000..w022 (May–Oct subset in parquet)
+  week_cols_pattern: "w"               # w000..w026 (growing-season subset in parquet)
 
 smap:
   source_dir: data/processed/smap/
@@ -51,12 +55,6 @@ smap:
   growing_season_weeks: [17, 39]
   spring_weeks: [13, 18]
   smap_start_year: 2015
-
-external:
-  soil_parquet: data/processed/task4/soil_features.parquet
-  terrain_parquet: data/processed/task4/terrain_features.parquet
-  daymet_glob: "data/processed/task4/daymet_features_{year}.parquet"
-  csb_parquet: data/processed/task4/csb_features.parquet
 
 model:
   family: lightgbm
@@ -82,14 +80,10 @@ feature_importance:
   shap_sample_size: 1000
 
 ablations:
-  - { id: A, name: cdl_only, features: [cdl] }
-  - { id: B, name: cdl_ndvi, features: [cdl, ndvi] }
-  - { id: C, name: cdl_smap, features: [cdl, smap] }
+  - { id: A, name: cdl_only,      features: [cdl] }
+  - { id: B, name: cdl_ndvi,      features: [cdl, ndvi] }
+  - { id: C, name: cdl_smap,      features: [cdl, smap] }
   - { id: D, name: cdl_ndvi_smap, features: [cdl, ndvi, smap] }
-  - { id: E, name: D_plus_soil, features: [cdl, ndvi, smap, soil] }
-  - { id: F, name: E_plus_terrain, features: [cdl, ndvi, smap, soil, terrain] }
-  - { id: G, name: F_plus_daymet, features: [cdl, ndvi, smap, soil, terrain, daymet] }
-  - { id: H, name: all_features, features: [cdl, ndvi, smap, soil, terrain, daymet, csb] }
 
 output:
   figures_dir: artifacts/figures/task4/
