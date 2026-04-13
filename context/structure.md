@@ -252,9 +252,9 @@ artifacts/
 
 ---
 
-### Task 3 — Soil Moisture Anomaly
+### Task 3 — Soil Moisture Anomaly (frequentist z-score + NIG Bayesian)
 
-Three notebooks (replaces former 01–05 stubs): **data prep → climatology + anomalies → maps/tables/bundle**.
+Three notebooks: **data prep → climatology + NIG Bayesian anomalies → maps/tables/bundle**.
 
 #### notebooks/task3_soil_moisture/01_pixel_panel_smap_cdl.ipynb
 - **Purpose:** Build the spatial subset: **rotation-eligible** `iy, ix` + **CDL 2019** label; sanity histogram of one SMAP week on that subset.
@@ -264,18 +264,22 @@ Three notebooks (replaces former 01–05 stubs): **data prep → climatology + a
 - **Next steps:** Run notebook 02.
 
 #### notebooks/task3_soil_moisture/02_climatology_and_anomalies.ipynb
-- **Purpose:** **ISO week-of-year** μ and σ from **2015–2021**; **multi-event** z-scores vs that climatology (default: **2019** wet-season window, **2022** Jun–Aug Plains window in `event_windows`).
+- **Purpose:** **ISO week-of-year** μ and σ from **2015–2021** + **NIG conjugate Bayesian** posterior params per (pixel, week); **multi-event** z-scores **and** NIG posterior predictive anomaly scores.
 - **Inputs:** `task3_pixel_panel.parquet`, SMAP wide Parquets + metadata JSONs, `configs/task3_soil_moisture.yaml`
-- **Outputs:** `data/processed/task3/smap_climatology.parquet` (union of weeks needed by all events), `data/processed/task3/smap_anomaly_{event_id}.parquet` per configured event (includes `event_id`, `event_label`).
-- **Key findings:** One row per pixel-week in each event window with `z_score`, `sm_mean`, `sm_std`, `cdl_2019`.
-- **Next steps:** Run notebook 03 (figures + CSV).
+- **Outputs:** `data/processed/task3/smap_climatology.parquet` (includes `nig_mu_n`, `nig_lam_n`, `nig_alpha_n`, `nig_beta_n`), `data/processed/task3/smap_anomaly_{event_id}.parquet` (includes `z_score`, `nig_p_anomaly`, `nig_p_drought`, `nig_posterior_scale`, `nig_df`).
+- **Key findings:** Student-t posterior predictive with heavier tails for sparse pixels; NIG scores complement the frequentist z-score.
+- **Next steps:** Run notebook 03.
 
 #### notebooks/task3_soil_moisture/03_maps_timeseries_tables.ipynb
-- **Purpose:** For each `event_id`: **4-panel** anomaly maps at spread ISO weeks, **cropland mean z** time series with ±1σ band, **duration** map (wet: fraction of weeks with z > threshold; dry: fraction with z < threshold), **state × crop** summary CSV, and `run_bundle.json` with `outputs_by_event`.
-- **Inputs:** `smap_anomaly_{event_id}.parquet`, `cdl_stack_spatial_metadata.json`, Natural Earth / external state boundaries (via `load_cornbelt_state_boundaries_5070`)
-- **Outputs:** `artifacts/figures/task3/task3__{event_id}__anomaly_map_4panel__*.png`, `task3__{event_id}__anomaly_timeseries_cropland__*.png`, `task3__{event_id}__duration_fraction__*.png`, `artifacts/tables/task3/task3__{event_id}__anomaly_stats_by_state_crop__*.csv`, `artifacts/logs/runs/*/run_bundle.json`
-- **Key findings:** Contrasts **2019** excess-moisture signal with **2022** dry-soil / negative-z patterns on the same rotation/CDL pixel frame; tables still use CDL **corn / soybean / winter wheat / oats** codes (`cdl_2019`).
-- **Next steps:** Add prose interpretation (phenology calendar, NASS citations) in the report PDF.
+- **Purpose:** For each `event_id`: **4-panel** z-score maps, **cropland mean z** time series, **duration** map, **NIG P(drought) 4-panel**, **NIG uncertainty** map, **z-score vs NIG scatter**, **state × crop** CSV (with NIG columns), and `run_bundle.json`.
+- **Inputs:** `smap_anomaly_{event_id}.parquet`, `cdl_stack_spatial_metadata.json`, state boundaries
+- **Outputs:** 6 PNGs per event (`anomaly_map_4panel`, `anomaly_timeseries`, `duration_fraction`, `nig_p_drought_4panel`, `nig_uncertainty`, `zscore_vs_nig_scatter`), CSV with `mean_nig_p_drought` and `frac_pdrought_lt_0p1`, `run_bundle.json`
+- **Key findings:** Contrasts frequentist and Bayesian anomaly surfaces; NIG uncertainty highlights data-sparse regions.
+
+#### Source modules
+- `src/modeling/task3_nig_anomaly.py` — NIG posterior params + Student-t predictive scores (pure NumPy/SciPy)
+- `src/modeling/task3_smap_anomalies.py` — frequentist climatology + z-score
+- `src/modeling/task3_aggregate.py` — state × crop summary (z + NIG columns)
 
 ---
 

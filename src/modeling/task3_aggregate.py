@@ -78,12 +78,15 @@ def attach_state_name(
 
 def state_crop_anomaly_summary(anom: pd.DataFrame) -> pd.DataFrame:
     """
-    ``anom`` must include ``z_score``, ``cdl_2019``, and ``state`` (from ``attach_state_name``).
+    ``anom`` must include ``z_score``, ``cdl_label`` (or legacy ``cdl_2019``), and ``state``.
 
     One row per (state, crop_label) for CDL codes in ``CDL_CROP_NAMES``.
+    When NIG columns are present, adds ``mean_nig_p_drought`` and ``frac_pdrought_lt_0p1``.
     """
+    has_nig = "nig_p_drought" in anom.columns
     x = anom.copy()
-    x["crop"] = x["cdl_2019"].map(CDL_CROP_NAMES)
+    cdl_col = "cdl_label" if "cdl_label" in x.columns else "cdl_2019"
+    x["crop"] = x[cdl_col].map(CDL_CROP_NAMES)
     x = x[x["crop"].notna()]
     rows = []
     for (st, cr), g in x.groupby(["state", "crop"]):
@@ -91,15 +94,18 @@ def state_crop_anomaly_summary(anom: pd.DataFrame) -> pd.DataFrame:
         max_z = float(g["z_score"].max())
         frac_gt_1 = float(np.mean(g["z_score"].to_numpy() > 1.0))
         frac_gt_1p5 = float(np.mean(g["z_score"].to_numpy() > 1.5))
-        rows.append(
-            {
-                "state": st,
-                "crop": cr,
-                "mean_z": round(mean_z, 4),
-                "max_z": round(max_z, 4),
-                "frac_obs_z_gt_1": round(frac_gt_1, 4),
-                "frac_obs_z_gt_1p5": round(frac_gt_1p5, 4),
-                "n_pixel_weeks": int(len(g)),
-            }
-        )
+        row = {
+            "state": st,
+            "crop": cr,
+            "mean_z": round(mean_z, 4),
+            "max_z": round(max_z, 4),
+            "frac_obs_z_gt_1": round(frac_gt_1, 4),
+            "frac_obs_z_gt_1p5": round(frac_gt_1p5, 4),
+            "n_pixel_weeks": int(len(g)),
+        }
+        if has_nig:
+            pd_arr = g["nig_p_drought"].to_numpy()
+            row["mean_nig_p_drought"] = round(float(np.nanmean(pd_arr)), 4)
+            row["frac_pdrought_lt_0p1"] = round(float(np.nanmean(pd_arr < 0.1)), 4)
+        rows.append(row)
     return pd.DataFrame(rows).sort_values(["state", "crop"]).reset_index(drop=True)

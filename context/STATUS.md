@@ -7,7 +7,7 @@ Current state of the project. Updated after each meaningful work session.
 ## Current Status
 
 **Date:** 2026-04-12  
-**Phase:** Task 1–2 pipelines executable; Task 2 rotation **processed-CDL path** complete — notebooks **01→04** (merged **04** = maps + areal + county), **Bayesian DM** artifacts and interpretation in `context/TASK2_RESULTS.md` §2.7, `TASK2_NAFSI_DATA_CONTRACT.md`, `RISKS.md` (RISK-009).
+**Phase:** Tasks 1–3 pipelines executable. Task 2 rotation complete (notebooks **01→04**, Bayesian DM). Task 3 soil moisture complete — **Normal-Inverse-Gamma (NIG) Bayesian** anomaly layer on top of frequentist z-scores, two events (2019 flood, 2022 drought), 6 figures per event, NIG columns in CSV tables. See `context/TASK3_RESULTS.md`.
 
 ## Completed
 
@@ -37,8 +37,8 @@ Current state of the project. Updated after each meaningful work session.
 
 - [ ] Task 1: Final phenology figures + report export
 - [x] Task 2: Eligibility filter, threshold sensitivity sweep, Markov matrix, areal metadata JSON, regional table (see `TASK2_RESULTS.md`)
-- [ ] Task 3: SMAP baseline climatology and anomaly maps
-- [ ] Task 3: Agricultural impact interpretation
+- [x] Task 3: SMAP baseline climatology and anomaly maps (frequentist z-score + **NIG Bayesian** posterior predictive)
+- [x] Task 3: Agricultural impact interpretation (NIG P(drought) maps, uncertainty surfaces, state×crop CSV with `frac_pdrought_lt_0p1`)
 - [ ] Task 4: Feature engineering and model training
 - [ ] Task 4: Spatial prediction map and feature importance ablation  
   *(NAFSI-style crop-type metrics: OA, per-class F1, confusion matrix, NDVI/SMAP ablations — see `context/PROJECT_BRIEF.md` “NAFSI-style research expectations vs tasks”.)*

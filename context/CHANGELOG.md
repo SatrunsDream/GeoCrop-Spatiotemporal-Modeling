@@ -7,6 +7,10 @@ Milestone and version log for the GeoCrop NAFSI Track 1 submission.
 ## [Unreleased]
 
 ### Added
+- **Task 3 Bayesian NIG anomaly layer**: `src/modeling/task3_nig_anomaly.py` — conjugate Normal-Inverse-Gamma posterior predictive anomaly detection for SMAP soil moisture (Student-t, no MCMC, pure NumPy/SciPy).
+- `context/TASK3_RESULTS.md` — full results and interpretation doc mirroring `TASK2_RESULTS.md` structure.
+- NB02 (Task 3): NIG posterior params (`nig_mu_n`, `nig_lam_n`, `nig_alpha_n`, `nig_beta_n`) added to `smap_climatology.parquet`; `nig_p_anomaly`, `nig_p_drought`, `nig_posterior_scale`, `nig_df` added to each event anomaly Parquet.
+- NB03 (Task 3): 3 new figures per event — NIG P(drought) 4-panel (RdYlBu), posterior uncertainty map (magma), z-score vs NIG scatter. State×crop CSV now includes `mean_nig_p_drought` and `frac_pdrought_lt_0p1`.
 - `context/TASK2_NAFSI_DATA_CONTRACT.md` — processed CDL/NDVI naming, Task 2 artifact layout, NAFSI rigor checklist (mirrors Task 1 `03_ndvi_phenology_hsgp_bayesian.ipynb` patterns).
 
 ### Changed
@@ -40,7 +44,7 @@ Milestone and version log for the GeoCrop NAFSI Track 1 submission.
 | Repo scaffold + structure | 2026-04-10 | ✅ Done |
 | Task 1 — NDVI analysis complete | TBD | ⬜ Pending |
 | Task 2 — Rotation mapping complete | TBD | ⬜ Pending |
-| Task 3 — SMAP anomaly complete | TBD | ⬜ Pending |
+| Task 3 — SMAP anomaly complete (freq + NIG Bayesian) | 2026-04-12 | ✅ Done |
 | Task 4 — Crop prediction model complete | TBD | ⬜ Pending |
 | PDF report draft | TBD | ⬜ Pending |
 | Final review + freeze | 2026-04-13 16:00 CT | ⬜ Pending |

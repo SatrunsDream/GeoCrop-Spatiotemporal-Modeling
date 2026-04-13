@@ -45,12 +45,20 @@ def load_rotation_eligible_pixels(repo_root: Path) -> pd.DataFrame:
     return df.drop_duplicates().reset_index(drop=True)
 
 
-def attach_cdl_2019(repo_root: Path, pixels: pd.DataFrame) -> pd.DataFrame:
+def attach_cdl_year(repo_root: Path, pixels: pd.DataFrame, year: int) -> pd.DataFrame:
+    """Attach ``cdl_{year}`` column from the CDL wide Parquet, renamed to ``cdl_label``."""
     from src.io.cdl_parquet import cdl_wide_parquet_path
 
+    col = f"cdl_{int(year)}"
     pq = cdl_wide_parquet_path(repo_root)
-    cdl = pd.read_parquet(pq, columns=["iy", "ix", "cdl_2019"])
+    cdl = pd.read_parquet(pq, columns=["iy", "ix", col])
+    cdl = cdl.rename(columns={col: "cdl_label"})
     return pixels.merge(cdl, on=["iy", "ix"], how="left")
+
+
+def attach_cdl_2019(repo_root: Path, pixels: pd.DataFrame) -> pd.DataFrame:
+    """Backward-compatible wrapper — attaches ``cdl_2019`` as ``cdl_label``."""
+    return attach_cdl_year(repo_root, pixels, 2019)
 
 
 def baseline_climatology_iso_weeks(
@@ -120,11 +128,13 @@ def compute_event_anomalies(
     """
     ``event_specs`` is ``(wcol, date_str, iso_week)`` from ``src.io.smap_weekly_parquet.event_week_columns``.
 
-    ``pixels`` must include ``iy``, ``ix`` (and optionally ``cdl_2019`` for downstream tables).
+    ``pixels`` must include ``iy``, ``ix`` (and optionally ``cdl_label`` for downstream tables).
     """
     path = smap_wide_parquet_path(repo_root, event_year)
     use = pixels[["iy", "ix"]].copy()
-    if "cdl_2019" in pixels.columns:
+    if "cdl_label" in pixels.columns:
+        use = pixels[["iy", "ix", "cdl_label"]].copy()
+    elif "cdl_2019" in pixels.columns:
         use = pixels[["iy", "ix", "cdl_2019"]].copy()
 
     out: list[pd.DataFrame] = []
