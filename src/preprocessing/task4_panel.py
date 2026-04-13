@@ -360,11 +360,16 @@ def compute_ndvi_features(
     # 3-week uniform smooth along time (vectorized across all pixels)
     pad = np.pad(M, ((0, 0), (1, 1)), mode="edge")
     smooth = (pad[:, :-2] + pad[:, 1:-1] + pad[:, 2:]) / np.float32(3.0)
-    peak_w = np.nanargmax(smooth, axis=1).astype(np.float32)
+    all_nan = np.all(np.isnan(smooth), axis=1)
+    safe_smooth = smooth.copy()
+    safe_smooth[all_nan, 0] = 0.0
+    peak_w = np.nanargmax(safe_smooth, axis=1).astype(np.float32)
+    peak_w[all_nan] = np.nan
     thr = base + 0.2 * amp
     diffs = np.diff(smooth, axis=1, prepend=smooth[:, :1])
     inc = np.maximum(0.0, diffs)
     greenup_slope = np.nanmax(inc, axis=1)
+    greenup_slope[all_nan] = np.nan
     n = M.shape[1]
     above_thr = smooth >= thr[:, None]
     greenup = np.argmax(above_thr, axis=1).astype(np.float32)
