@@ -91,5 +91,28 @@ output:
   models_dir: artifacts/models/task4/
   processed_dir: data/processed/task4/
 
+tuning:
+  n_trials: 25
+  timeout: 1800                          # seconds (30 min hard cap)
+  search_space:
+    n_estimators_lo: 500
+    n_estimators_hi: 3000
+    learning_rate_lo: 0.005
+    learning_rate_hi: 0.1
+    max_depth_lo: 5
+    max_depth_hi: 12
+    num_leaves_lo: 31
+    num_leaves_hi: 255
+    min_child_samples_lo: 5
+    min_child_samples_hi: 100
+    subsample_lo: 0.6
+    subsample_hi: 1.0
+    colsample_bytree_lo: 0.5
+    colsample_bytree_hi: 1.0
+    reg_alpha_lo: 0.001
+    reg_alpha_hi: 10.0
+    reg_lambda_lo: 0.001
+    reg_lambda_hi: 10.0
+
 run:
   seed: 42

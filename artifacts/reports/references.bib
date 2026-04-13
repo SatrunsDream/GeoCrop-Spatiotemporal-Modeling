@@ -1,0 +1,490 @@
+@article{corn_belt,
+author = {Britannica Editors},
+title = {Corn Belt},
+journal = "Britannica",
+URL = "https://www.britannica.com/place/Corn-Belt"
+}
+@misc{challenge_video,
+author = {National Food Security and Innovation Hub (NAFSI)},
+title = {NAFSI Hub Student Data Challenge Spring 2026 Informational Webinar},
+URL = "https://www.youtube.com/watch?v=wkQxYYFQ9Xk"
+}
+@misc{cdl_cropscape,
+author       = {{USDA National Agricultural Statistics Service}},
+title        = {CropScape -- Cropland Data Layer},
+howpublished = {\url{https://nassgeodata.gmu.edu/CropScape/}}
+}
+@misc{cdl_scinet,
+author       = {{USDA National Agricultural Statistics Service}},
+title        = {Cropland CROS -- Cropland Data Layer},
+howpublished = {\url{https://croplandcros.scinet.usda.gov/}}
+}
+@misc{ndvi_cropsmart,
+author       = {{CSISS -- George Mason University}},
+title        = {CropSmart -- NDVI Weekly Composites},
+howpublished = {\url{https://cloud.csiss.gmu.edu/CropSmart/}}
+}
+@misc{smap_cropsmart,
+author       = {{CSISS -- George Mason University}},
+title        = {CropSmart -- SMAP Soil Moisture},
+howpublished = {\url{https://cloud.csiss.gmu.edu/CropSmart/}}
+}
+@misc{espg_ref,
+author       = {{SpatialReference.org}},
+title        = {EPSG:5070},
+howpublished = {\url{https://spatialreference.org/ref/epsg/5070/}}
+}
+https://spatialreference.org/ref/epsg/5070/
+@software{rasterio,
+author    = {Sean Gillies and others},
+title     = {Rasterio: geospatial raster I/O for Python},
+publisher = {Mapbox},
+year      = {2013},
+url       = {https://github.com/rasterio/rasterio}
+}
+@software{rioxarray,
+author  = {Alan Snow and others},
+title   = {rioxarray: geospatial xarray extension powered by rasterio},
+year    = {2019},
+url     = {https://github.com/corteva/rioxarray}
+}
+@software{pyproj,
+author  = {Jeff Whitaker and others},
+title   = {pyproj: Python interface to PROJ},
+year    = {2006},
+url     = {https://github.com/pyproj4/pyproj}
+}
+@software{pyarrow,
+author  = {{Apache Arrow Developers}},
+title   = {Apache Arrow: a cross-language development platform for in-memory data},
+year    = {2016},
+url     = {https://arrow.apache.org}
+}
+@article{riutort2023hsgp,
+author  = {Gabriel Riutort-Mayol and Paul-Christian B\"{u}rkner 
+           and Michael R. Andersen and Arno Solin and Aki Vehtari},
+title   = {Practical Hilbert Space Approximate Bayesian Gaussian 
+           Processes for Probabilistic Programming},
+journal = {Statistics and Computing},
+year    = {2023},
+volume  = {33},
+number  = {1},
+pages   = {17},
+DOI = {https://doi.org/10.48550/arXiv.2004.11408}
+}
+@misc{numpyro,
+author = {Phan, Du and Pradhan, Neeraj and Jankowiak, Martin},
+title  = {Composable Effects for Flexible and Accelerated 
+          Probabilistic Programming in NumPyro},
+year   = {2019},
+url    = {https://arxiv.org/abs/1912.11554}
+}
+
+% ============================================================
+% Must-Read Papers — Task 1: NDVI Phenology
+% ============================================================
+ 
+% TIMESAT: standard phenology metric definitions (SOS, EOS, peak, amplitude, integral)
+@article{jonsson2004timesat,
+  author  = {J\"{o}nsson, Per and Eklundh, Lars},
+  title   = {{TIMESAT} --- a program for analyzing time-series of satellite sensor data},
+  journal = {Computers \& Geosciences},
+  year    = {2004},
+  volume  = {30},
+  number  = {8},
+  pages   = {833--845},
+  doi     = {10.1016/j.cageo.2004.05.006}
+}
+ 
+% Corn vs soybean phenology detection with MODIS — directly addresses Task 1
+@article{zeng2016hybrid,
+  author  = {Zeng, Linglin and Wardlow, Brian D. and Wang, Rui and Shan, Jie
+             and Tadesse, Tsegaye and Hayes, Michael J. and Li, Deren},
+  title   = {A hybrid approach for detecting corn and soybean phenology with
+             time-series {MODIS} data},
+  journal = {Remote Sensing of Environment},
+  year    = {2016},
+  volume  = {181},
+  pages   = {237--250},
+  doi     = {10.1016/j.rse.2016.03.039}
+}
+ 
+% MODIS 250m VI crop classification — corn/soy separability, purity filtering
+@article{wardlow2007modis,
+  author  = {Wardlow, Brian D. and Egbert, Stephen L. and Kastens, Jude H.},
+  title   = {Analysis of time-series {MODIS} 250\,m vegetation index data for
+             crop classification in the {U.S.} Central Great Plains},
+  journal = {Remote Sensing of Environment},
+  year    = {2007},
+  volume  = {108},
+  number  = {3},
+  pages   = {290--310},
+  doi     = {10.1016/j.rse.2006.11.021}
+}
+ 
+% Large-area MODIS NDVI crop mapping — U.S. Central Great Plains
+@article{wardlow2008largecrop,
+  author  = {Wardlow, Brian D. and Egbert, Stephen L.},
+  title   = {Large-area crop mapping using time-series {MODIS} 250\,m {NDVI} data:
+             An assessment for the {U.S.} Central Great Plains},
+  journal = {Remote Sensing of Environment},
+  year    = {2008},
+  volume  = {112},
+  number  = {3},
+  pages   = {1096--1116},
+  doi     = {10.1016/j.rse.2007.07.019}
+}
+ 
+% MODIS VI Collection 6.1 User Guide — authoritative QA and scaling reference
+@techreport{modis_vi_userguide,
+  author      = {{NASA Land Processes DAAC}},
+  title       = {{MODIS} Vegetation Index Products ({NDVI} and {EVI}):
+                 {MOD13} User Guide, Version 6.1},
+  institution = {NASA LP DAAC, USGS EROS},
+  year        = {2021},
+  url         = {https://lpdaac.usgs.gov/documents/621/MOD13_User_Guide_V61.pdf}
+}
+ 
+% ============================================================
+% Must-Read Papers — Task 2: Crop Rotation Detection
+% ============================================================
+ 
+% RECRUIT algorithm — edit-distance rotation detection from multi-year CDL
+@article{sahajpal2014recruit,
+  author  = {Sahajpal, Ritvik and Zhang, Xuesong and Izaurralde, Roberto C.
+             and Gelfand, Ilya and Hurtt, George C.},
+  title   = {Identifying representative crop rotation patterns and grassland
+             loss in the {US} Western Corn Belt},
+  journal = {Computers and Electronics in Agriculture},
+  year    = {2014},
+  volume  = {108},
+  pages   = {173--182},
+  doi     = {10.1016/j.compag.2014.08.005}
+}
+ 
+% ============================================================
+% Must-Read Papers — Task 3: SMAP Soil Moisture Anomalies
+% ============================================================
+ 
+% SMAP L4 product assessment and algorithm description — primary product reference
+@article{reichle2017smap,
+  author  = {Reichle, Rolf H. and {De Lannoy}, Gabrielle J. M. and Liu, Qing
+             and Ardizzone, Joseph V. and Colliander, Andreas and Conaty, Austin
+             and Crow, Wade and Jackson, Thomas J. and Jones, Lucas A.
+             and Kimball, John S. and Koster, Randal D. and Mahanama, Sarith P.
+             and Smith, Edmond B. and others},
+  title   = {Assessment of the {SMAP} Level-4 Surface and Root-Zone Soil
+             Moisture Product Using In Situ Measurements},
+  journal = {Journal of Hydrometeorology},
+  year    = {2017},
+  volume  = {18},
+  number  = {10},
+  pages   = {2621--2645},
+  doi     = {10.1175/JHM-D-17-0063.1}
+}
+ 
+% Agricultural drought monitoring with SMAP — standardized anomaly methodology
+@article{mladenova2020drought,
+  author  = {Mladenova, Iliana E. and Bolten, John D. and Crow, Wade
+             and Sazib, Nazmus and Reynolds, Curt},
+  title   = {Agricultural Drought Monitoring via the Assimilation of {SMAP}
+             Soil Moisture Retrievals Into a Global Soil Water Balance Model},
+  journal = {Frontiers in Big Data},
+  year    = {2020},
+  volume  = {3},
+  pages   = {10},
+  doi     = {10.3389/fdata.2020.00010}
+}
+ 
+% SMAP L4 9km EASE-Grid product documentation
+@misc{smap_l4_nsidc,
+  author       = {{National Snow and Ice Data Center}},
+  title        = {{SMAP} L4 9\,km {EASE}-Grid Surface and Root Zone Soil
+                  Moisture Geophysical Data ({SPL4SMGP})},
+  howpublished = {\url{https://nsidc.org/data/spl4smgp/versions/3}},
+  year         = {2015}
+}
+ 
+% ============================================================
+% Must-Read Papers — Task 4: Crop Prediction Model
+% ============================================================
+ 
+% Machine-learned crop planting prediction from CDL history — nearest Task 4 analog
+@article{zhang2019cropprediction,
+  author  = {Zhang, Chen and Di, Liping and Lin, Li and Guo, Liying},
+  title   = {Machine-learned prediction of annual crop planting in the
+             {U.S.} Corn Belt based on historical crop planting maps},
+  journal = {Computers and Electronics in Agriculture},
+  year    = {2019},
+  volume  = {166},
+  pages   = {104989},
+  doi     = {10.1016/j.compag.2019.104989}
+}
+ 
+% Preseason crop prediction using CSB polygons — field-level Task 4 approach
+@article{abernethy2023csb,
+  author  = {Abernethy, Jonathon and Beeson, Peter and Boryan, Claire
+             and Hunt, Kevin and Sartore, Luca},
+  title   = {Preseason crop type prediction using crop sequence boundaries},
+  journal = {Computers and Electronics in Agriculture},
+  year    = {2023},
+  volume  = {208},
+  pages   = {107768},
+  doi     = {10.1016/j.compag.2023.107768}
+}
+ 
+% ============================================================
+% Must-Read Paper — Cross-cutting: Spatial CV / Validation
+% ============================================================
+ 
+% Block cross-validation for spatially structured data — leakage prevention
+@article{roberts2017cv,
+  author  = {Roberts, David R. and Bahn, Volker and Ciuti, Simone
+             and Boyce, Mark S. and Elith, Jane and Guillera-Arroita, Gurutzeta
+             and Hauenstein, Severin and Lahoz-Monfort, Jos\'{e} J.
+             and Schr\"{o}der, Boris and Thuiller, Wilfried and Warton, David I.
+             and Wintle, Brendan A. and Hartig, Florian and Dormann, Carsten F.},
+  title   = {Cross-validation strategies for data with temporal, spatial,
+             hierarchical, or phylogenetic structure},
+  journal = {Ecography},
+  year    = {2017},
+  volume  = {40},
+  number  = {8},
+  pages   = {913--929},
+  doi     = {10.1111/ecog.02881}
+}
+
+% ============================================================
+% Task 2 Specific Citations
+% ============================================================
+ 
+% Stern et al. 2012 — Iowa CDL rotation change analysis; per-state framing
+@article{stern2012iowa,
+  author  = {Stern, Alan J. and Doraiswamy, Paul C. and Hunt, E. Raymond},
+  title   = {Changes of crop rotation in {Iowa} determined from the {United States
+             Department of Agriculture, National Agricultural Statistics Service}
+             cropland data layer product},
+  journal = {Journal of Applied Remote Sensing},
+  year    = {2012},
+  volume  = {6},
+  number  = {1},
+  pages   = {063590},
+  doi     = {10.1117/1.JRS.6.063590}
+}
+ 
+% Nandan et al. 2026 — Modern rotation mapping framework (Markov + classification)
+@article{nandan2026rotation,
+  author  = {Nandan, Ritu and others},
+  title   = {A standardized approach to map spatially explicit crop rotations},
+  journal = {International Journal of Applied Earth Observation and Geoinformation},
+  year    = {2026},
+  doi     = {10.1016/j.jag.2026.00124}
+}
+ 
+% USDA NASS 2023 — Entropy/Gini uncertainty layers for predictive CDL
+@techreport{nass_markov,
+  author      = {{USDA National Agricultural Statistics Service}},
+  title       = {Developing Entropies of Predictive Cropland Data Layers for
+                 Crop Survey Imputation},
+  institution = {USDA NASS},
+  year        = {2022},
+  note        = {Presented at IGARSS 2022},
+  url         = {https://www.nass.usda.gov/Education_and_Outreach/Reports%2C_Presentations_and_Conferences/reports/conferences/IGARSS-2022/Developing%20Entropies%20of%20Predictive%20CDLs%20for%20Crop%20Survey%20Imputation.pdf}
+}
+ 
+% Welton & Ades 2005 — Bayesian estimation of Markov chain transition probabilities
+% (canonical cite for the Dirichlet-Multinomial / Bayesian Markov posterior framework)
+@article{welton2005,
+  author  = {Welton, Nicky J. and Ades, A. E.},
+  title   = {Estimation of {Markov} chain transition probabilities and rates from
+             fully and partially observed data: uncertainty propagation, evidence
+             synthesis, and model calibration},
+  journal = {Medical Decision Making},
+  year    = {2005},
+  volume  = {25},
+  number  = {6},
+  pages   = {633--645},
+  doi     = {10.1177/0272989X05282637}
+}
+ 
+% ============================================================
+% Must-Read Paper — Cross-cutting: Spatial CV / Validation
+% ============================================================
+ 
+% Block cross-validation for spatially structured data — leakage prevention
+@article{roberts2017cv,
+  author  = {Roberts, David R. and Bahn, Volker and Ciuti, Simone
+             and Boyce, Mark S. and Elith, Jane and Guillera-Arroita, Gurutzeta
+             and Hauenstein, Severin and Lahoz-Monfort, Jos\'{e} J.
+             and Schr\"{o}der, Boris and Thuiller, Wilfried and Warton, David I.
+             and Wintle, Brendan A. and Hartig, Florian and Dormann, Carsten F.},
+  title   = {Cross-validation strategies for data with temporal, spatial,
+             hierarchical, or phylogenetic structure},
+  journal = {Ecography},
+  year    = {2017},
+  volume  = {40},
+  number  = {8},
+  pages   = {913--929},
+  doi     = {10.1111/ecog.02881}
+}
+
+% ============================================================
+% Task 3 Specific Citations
+% ============================================================
+ 
+% Murphy 2007 — canonical NIG conjugate prior + Student-t posterior predictive derivation
+% Used in task3_nig_anomaly.py for the exact update equations (lambda_n, mu_n, alpha_n, beta_n)
+@techreport{murphy2007conjugate,
+  author      = {Murphy, Kevin P.},
+  title       = {Conjugate {Bayesian} Analysis of the {Gaussian} Distribution},
+  institution = {University of British Columbia},
+  year        = {2007},
+  url         = {https://www.cs.ubc.ca/~murphyk/Papers/bayesGauss.pdf}
+}
+ 
+% Gelman et al. 2008 — weakly informative prior specification philosophy
+% Named explicitly in TASK3_RESULTS.md §1.3 (NIG prior rationale)
+@article{gelman2008weakly,
+  author  = {Gelman, Andrew and Jakulin, Aleks and Pittau, Maria Grazia and Su, Yu-Sung},
+  title   = {A weakly informative default prior distribution for logistic and other
+             regression models},
+  journal = {The Annals of Applied Statistics},
+  year    = {2008},
+  volume  = {2},
+  number  = {4},
+  pages   = {1360--1383},
+  doi     = {10.1214/08-AOAS191}
+}
+ 
+% Xu et al. 2018 — Standardized Soil Moisture Index (SSI) using SMAP
+% Direct precedent for z-score / percentile-based drought detection on SMAP data
+@article{xu2018ssi,
+  author  = {Xu, Yaping and Wang, Lei and Ross, Kenton W. and Liu, Cuiling and Berry, Kimberly},
+  title   = {Standardized Soil Moisture Index for Drought Monitoring Based on {Soil
+             Moisture Active Passive} Observations and 36 Years of {North American Land
+             Data Assimilation System} Data: {A} Case Study in the {Southeast United States}},
+  journal = {Remote Sensing},
+  year    = {2018},
+  volume  = {10},
+  number  = {2},
+  pages   = {301},
+  doi     = {10.3390/rs10020301}
+}
+ 
+% Pal & Dominguez 2020 — 2019 Mississippi/Missouri flooding, persistent wet soils
+% Event characterisation reference for the midwest_flood_2019 analysis window
+@article{pal2020flood,
+  author  = {Pal, Subashisa and Dominguez, Francina},
+  title   = {The 2019 {Mississippi} and {Missouri} River Flooding and Its Impact on
+             Atmospheric Boundary Layer Dynamics},
+  journal = {Geophysical Research Letters},
+  year    = {2020},
+  volume  = {47},
+  number  = {6},
+  pages   = {e2019GL086933},
+  doi     = {10.1029/2019GL086933}
+}
+ 
+% Le et al. 2024 — SMAP soil moisture forecasts NDVI over CONUS cropland
+% Key bridge between Task 3 (soil moisture anomalies) and Task 4 / report question 5
+@article{le2024smap_ndvi,
+  author  = {Le, Minh-Hung and Bolten, John D. and Whitney, Kristi M. and
+             Johnson, David M. and Mueller, Richard and Mladenova, Iliana E.},
+  title   = {On the Use of {SMAP} Soil Moisture for Forecasting {NDVI} Over
+             {CONUS} Cropland Regions},
+  journal = {Geophysical Research Letters},
+  year    = {2024},
+  volume  = {51},
+  pages   = {e2024GL111187},
+  doi     = {10.1029/2024GL111187}
+}
+ 
+% ============================================================
+% Must-Read Paper — Cross-cutting: Spatial CV / Validation
+% ============================================================
+ 
+% Block cross-validation for spatially structured data — leakage prevention
+@article{roberts2017cv,
+  author  = {Roberts, David R. and Bahn, Volker and Ciuti, Simone
+             and Boyce, Mark S. and Elith, Jane and Guillera-Arroita, Gurutzeta
+             and Hauenstein, Severin and Lahoz-Monfort, Jos\'{e} J.
+             and Schr\"{o}der, Boris and Thuiller, Wilfried and Warton, David I.
+             and Wintle, Brendan A. and Hartig, Florian and Dormann, Carsten F.},
+  title   = {Cross-validation strategies for data with temporal, spatial,
+             hierarchical, or phylogenetic structure},
+  journal = {Ecography},
+  year    = {2017},
+  volume  = {40},
+  number  = {8},
+  pages   = {913--929},
+  doi     = {10.1111/ecog.02881}
+}
+
+% Otkin et al. 2018 — Flash drought definition, rapid D0→D3+ USDM escalation
+% Used to characterise the 2022 Great Plains drought event (plains_drought_2022)
+@article{otkin2018flash,
+  author  = {Otkin, Jason A. and Svoboda, Mark and Hunt, Eric D. and Ford, Trent W.
+             and Anderson, Martha C. and Hain, Christopher and Basara, Jeffrey B.},
+  title   = {Flash Droughts: {A} Review and Assessment of the Challenges Imposed by
+             Rapid-Onset Droughts in the {United States}},
+  journal = {Bulletin of the American Meteorological Society},
+  year    = {2018},
+  volume  = {99},
+  number  = {5},
+  pages   = {911--919},
+  doi     = {10.1175/BAMS-D-17-0149.1}
+}
+% ============================================================
+% Task 4 Specific Citations
+% ============================================================
+ 
+% Ke et al. 2017 — LightGBM algorithm (the actual model used)
+@inproceedings{ke2017lightgbm,
+  author    = {Ke, Guolin and Meng, Qi and Finley, Thomas and Wang, Taifeng
+               and Chen, Wei and Ma, Weidong and Ye, Qiwei and Liu, Tie-Yan},
+  title     = {{LightGBM}: {A} Highly Efficient Gradient Boosting Decision Tree},
+  booktitle = {Advances in Neural Information Processing Systems 30 (NIPS 2017)},
+  year      = {2017},
+  pages     = {3146--3154},
+  publisher = {Curran Associates, Inc.},
+  url       = {https://papers.nips.cc/paper/6907-lightgbm-a-highly-efficient-gradient-boosting-decision-tree}
+}
+ 
+% Lundberg & Lee 2017 — SHAP TreeExplainer (feature importance method used in NB03)
+@inproceedings{lundberg2017shap,
+  author    = {Lundberg, Scott M. and Lee, Su-In},
+  title     = {A Unified Approach to Interpreting Model Predictions},
+  booktitle = {Advances in Neural Information Processing Systems 30 (NIPS 2017)},
+  year      = {2017},
+  pages     = {4765--4774},
+  publisher = {Curran Associates, Inc.},
+  url       = {https://papers.nips.cc/paper/7062-a-unified-approach-to-interpreting-model-predictions}
+}
+ 
+% Cai et al. 2018 — corn/soybean classification with CDL labels + time-series + ML
+% Closest published precedent to Task 4's pipeline (CDL labels, NDVI time series, ML model)
+@article{cai2018crop,
+  author  = {Cai, Yaping and Guan, Kaiyu and Peng, Jian and Wang, Shaowen
+             and Seifert, Christopher and Wardlow, Brian and Li, Zhan},
+  title   = {A high-performance and in-season classification system of
+             field-level crop types using time-series {Landsat} data and a
+             machine learning approach},
+  journal = {Remote Sensing of Environment},
+  year    = {2018},
+  volume  = {210},
+  pages   = {35--47},
+  doi     = {10.1016/j.rse.2018.02.045}
+}
+ 
+% Zhong et al. 2019 — deep learning crop classification; documents corn↔soy confusion
+% Supports the corn/soy misclassification narrative (overlapping NDVI phenology)
+@article{zhong2019deep,
+  author  = {Zhong, Liheng and Hu, Lina and Zhou, Hang},
+  title   = {Deep learning based multi-temporal crop classification},
+  journal = {Remote Sensing of Environment},
+  year    = {2019},
+  volume  = {221},
+  pages   = {430--443},
+  doi     = {10.1016/j.rse.2018.11.032}
+}
+ 

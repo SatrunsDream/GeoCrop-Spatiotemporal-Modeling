@@ -1,0 +1,1269 @@
+\documentclass{article}
+
+% if you need to pass options to natbib, use, e.g.:
+%     \PassOptionsToPackage{numbers, compress}{natbib}
+% before loading neurips_2024
+
+
+% ready for submission
+% \usepackage{neurips_2024}
+
+
+% to compile a preprint version, e.g., for submission to arXiv, add add the
+% [preprint] option:
+% \usepackage[preprint]{neurips_2024}
+
+
+% to compile a camera-ready version, add the [final] option, e.g.:
+\usepackage[final, nonatbib]{neurips_2024}
+
+% to avoid loading the natbib package, add option nonatbib:
+% \usepackage[final, numbers]{neurips_2024}
+\usepackage[numbers]{natbib}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{booktabs}
+\usepackage{amsfonts}
+\usepackage{nicefrac}
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage{siunitx}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{amsmath}
+\usepackage{enumitem}
+\usepackage{url}
+\usepackage{hyperref} % Keep this last
+
+\title{NAFSI Predictive Modeling for Agricultural Resilience}
+
+% The \author macro works with any number of authors. There are two commands
+% used to separate the names and addresses of multiple authors: \And and \AND.
+%
+% Using \And between authors leaves it to LaTeX to determine where to break the
+% lines. Using \AND forces a line break at that point. So, if LaTeX puts 3 of 4
+% authors names on the first line, and the last on the second line, try using
+% \AND instead of \And before the third author name.
+
+\author{
+Diego Osborn\thanks{\texttt{\href{diegoisaacosborn@gmail.com}{diegoisaacosborn@gmail.com}}} \\
+\And
+Sardor Sobirov\thanks{\texttt{\href{sardorbsobirov@gmail.com}{sardorbsobirov@gmail.com}}} \\
+\And
+Ivan Xie\thanks{\texttt{\href{ivxie@ucsd.edu}{ivxie@ucsd.edu}}} \\
+\And
+Kyle Choi\thanks{
+\texttt{\href{k3choi@ucsd.edu}{k3choi@ucsd.edu}}}\\
+\and
+Halıcıoğlu Data Science Institute\\
+UC San Diego\\
+}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+We present an end-to-end geospatial analysis pipeline for agricultural
+resilience modeling across the 13-state U.S.\ Corn Belt, integrating three
+operational remote-sensing datasets: the USDA Cropland Data Layer (CDL),
+MODIS NDVI weekly composites, and NASA SMAP~L4 soil moisture.
+The pipeline addresses four tasks.
+First, we fit Hilbert Space Gaussian Process (HSGP) models to
+characterize crop-specific NDVI phenology with calibrated uncertainty,
+achieving RMSE of 0.019--0.023 and well-calibrated 90\% credible intervals.
+Second, we classify 2.08~million pixels into regular corn--soy rotation
+(27\%), monoculture (4\%), or irregular cropping (69\%) using four
+sequence metrics and a Bayesian Dirichlet-Multinomial uncertainty layer.
+Third, we detect soil moisture anomalies during the 2019 Midwest flood and
+2022 Plains drought using a Normal-Inverse-Gamma conjugate framework that
+produces conservative, Student-$t$-based anomaly probabilities from a
+seven-year baseline --- correctly suppressing false positives in
+data-sparse regions where standard z-scores overstate confidence.
+Fourth, we train a LightGBM crop-type classifier on 38 features spanning
+CDL history, NDVI phenology, and SMAP soil moisture, achieving 79.2\%
+overall accuracy (macro F1 = 0.791) on a 2023 temporal holdout; an
+ablation study shows NDVI adds $+$1.7 percentage points over CDL-only,
+while SHAP analysis identifies prior-year CDL code and mid-season NDVI
+mean as the dominant predictors.
+All code, configurations, and artifacts are publicly available for full
+reproducibility.\\\\
+\textbf{Keywords:} Hilbert space Gaussian process, crop rotation,
+soil moisture anomaly detection, LightGBM, SHAP, remote sensing,
+precision agriculture
+\end{abstract}
+
+\section{Introduction and Motivation}
+\label{sec:intro}
+Modern agriculture faces growing pressure to produce more food while using fewer resources and adapting to an increasingly variable climate. Farmers and agricultural organizations must navigate complex decisions--from crop selection and rotation planning to soil management and irrigation--often with incomplete or difficult-to-interpret information. Advances in remote sensing and digital agriculture platforms have generated unprecedented volumes of spatially and temporally rich data, yet translating these datasets into actionable insight remains a significant challenge.
+
+In this project, we participate in the \textit{CropSmart Agricultural Data Challenge} \cite{challenge_video}, which tasks competitors with developing predictive models and decision-support tools using real agricultural and environmental datasets. Working with remote sensing products spanning vegetation indices, soil moisture, and annual crop classification maps across the U.S. Corn Belt\cite{corn_belt}, we develop a suite of analyses aimed at better understanding crop dynamics, rotation behavior, and the agricultural impact of hydrological events. Together, these efforts demonstrate how multi-source satellite data can be integrated to support more informed, data-driven decision-making in modern food systems.
+
+In Section \ref{sec:data}, we describe the datasets used and how they were preprocessed and spatially aligned. In Section \ref{sec:methodology}, we detail the modeling and analysis pipeline for each of the four tasks, including workflow diagrams. In Section \ref{sec:results}, we present the outputs of each task, including evaluation metrics, spatial maps, and phenological visualizations. We conclude with a discussion of our findings, model limitations, and directions for future work in Section \ref{sec:disc}.
+
+\section{Data}
+\label{sec:data}
+Our analysis draws on three publicly available remote sensing datasets, each retrieved programmatically from web-based mapping services and stored in a common spatial reference frame (EPSG:5070, NAD83 / Conus Albers) \cite{espg_ref} covering a 13-state Corn Belt study region: Iowa, Nebraska, Illinois, Indiana, Ohio, Minnesota, Missouri, South Dakota, Wisconsin, Kansas, North Dakota, Kentucky, and Michigan.
+
+Our first dataset is the Cropland Data Layer (CDL), and it is produced annually by the USDA National Agricultural Statistics Service (NASS). The CDL provides 30~m resolution crop type and land cover classifications across the Contiguous United States (CONUS) with over 100 distinct categories \cite{cdl_cropscape, cdl_scinet}. We use annual rasters spanning 2008--2025, with one image per year.
+
+Our second dataset are the Normalized Difference Vegetation Index (NDVI) Weekly Composites, which are weekly composite NDVI imagery derived from MODIS at 250~m resolution. We accessed this data through the CropSmart platform \cite{ndvi_cropsmart}, spanning 2000--2026. We retain only weeks within approximately DOY 100--310 (mid-April through early November) to capture the active growing season.
+
+Our third dataset is the Soil Moisture Active Passive (SMAP) Soil Moisture Weekly estimates, which are weekly surface soil moisture estimates from NASA's SMAP mission at 9~km resolution. This dataset was accessed through the same CropSmart platform \cite{smap_cropsmart}, spanning 2015--2025. All 52 weeks per year are retained to support baseline climatology estimation.
+
+All three datasets were clipped to a bounding box computed as the union of the 13 state extents projected into EPSG:5070 using \texttt{pyproj} \cite{pyproj}, then resampled to a shared 250~m pixel grid. The resulting rasters were exported to a wide-format Parquet structure \cite{pyarrow} with \texttt{zstd} compression, in which each row represents a pixel identified by grid coordinates $(i_y, i_x)$ and columns correspond to each year (CDL) or weekly time step (NDVI and SMAP). Spatial metadata, including the affine transform and bounding box, was saved alongside each file as JSON to support georeferenced output in later analyses.
+
+% Describe which datasets you used, how you preprocessed and spatially aligned them.
+
+\section{Methodology}
+\label{sec:methodology}
+\subsection{NDVI Time Series Analysis by Crop Type}
+\label{sec:time_series}
+For this task, we merge the preprocessed CDL and NDVI Parquet files described in Section~\ref{sec:data}, covering 2008--2025, on the pixel coordinates $(i_y, i_x)$. The CDL is pre-filtered to corn (code 1), soybean (code 5), and winter wheat (code 24), reducing the working set from $\sim$48M to $\sim$17M pixels. For each crop type, we compute the weekly mean, 25th-percentile, and 75th-percentile NDVI across all matching pixels, and convert the week index to a calendar day-of-year. Raw NDVI values (0--250 scale) are divided by 250 before analysis. Winter wheat is included alongside the two dominant Corn Belt crops to provide a contrasting cool-season phenology.
+
+Rather than characterizing NDVI phenology through simple summary statistics, we model the seasonal NDVI trajectory for each crop type as a smooth latent function of day-of-year (DOY) using a \textit{Hilbert Space Gaussian Process} (HSGP) \cite{riutort2023hsgp}. The HSGP provides a computationally efficient approximation to a full Gaussian Process (GP) by projecting the GP prior onto a finite set of basis functions defined on a bounded domain, avoiding the $\mathcal{O}(N^3)$ cost of exact GP inference. We model the weekly spatial-mean NDVI for each crop as:
+\begin{equation}
+    \text{NDVI}(t) = \mu + f(t) + \varepsilon, \qquad
+    f \sim \mathcal{GP}\!\left(0,\; k_{\text{SE}}\right), \qquad
+    \varepsilon \sim \mathcal{N}(0, \sigma^2)
+\end{equation}
+where $k_{\text{SE}}$ is a squared-exponential kernel:
+\begin{equation}
+    k_{\text{SE}}(t, t') = \alpha^2 \exp\!\left(
+        -\frac{(t - t')^2}{2\ell^2}
+    \right)
+\end{equation}
+The latent function $f$ is approximated using $m = 25$ HSGP basis functions on a domain $[-L, L]$ with $L = 1.3\times\max|t - \bar{t}|$, where $\bar{t}$ is the mean DOY. A separate model is fit independently to each crop type, allowing each to have its own amplitude, length-scale, and noise, accommodating the markedly different phenological shapes across crop types. Priors are specified in Table \ref{tab:hsgp_priors}.
+\begin{table}[htbp]
+\centering
+\begin{tabular}{lll}
+\hline
+\textbf{Parameter} & \textbf{Prior}\\
+\hline
+$\mu$ (intercept) & $\mathcal{N}(0.65,\; 0.25)$\\
+$\alpha$ (amplitude) & $\text{HalfNormal}(0.4)$\\
+$\ell$ (length-scale) & $\text{LogNormal}(\ln 25,\; 0.5)$\\
+$\sigma$ (noise) & $\text{HalfNormal}(0.1)$\\
+\hline
+\end{tabular}
+\caption{\textit{Prior distributions for the HSGP phenological model.}}
+\label{tab:hsgp_priors}
+\end{table}
+\\
+Inference is performed via \textit{Stochastic Variational Inference} (SVI) using a mean-field normal guide (\texttt{AutoNormal}) with the Adam optimizer at a learning rate of 0.005, run for 8{,}000 steps \cite{numpyro}. The posterior predictive distribution is then evaluated on a dense DOY grid to produce smooth phenological curves with uncertainty bands. Two sources of uncertainty are reported: the \textit{posterior predictive IQR} (25th--75th percentile of the posterior predictive distribution), which captures model uncertainty, and the \textit{empirical spatial IQR} computed directly from the pixel distributions, which captures within-region variability that the Bayesian model smooths over.
+
+To characterize inter-annual variability and assess which features best distinguish crop types across years, we extract three phenological features from the raw per-year aggregations for each crop: 
+\begin{enumerate}
+    \item \textit{peak DOY}, the day of year at which mean NDVI is maximized,
+    \item \textit{peak NDVI}, the maximum mean NDVI value,
+    \item and \textit{green-up slope}, the rate of NDVI increase from season start to peak, expressed in NDVI units per 30 days.
+\end{enumerate}
+
+Model performance is assessed on both accuracy and probabilistic calibration. Point accuracy is measured by RMSE and MAE of the posterior mean against observed weekly spatial means. Calibration is evaluated via: 
+\begin{enumerate}
+    \item a \textit{Probability Integral Transform (PIT) histogram}, where a uniform distribution indicates good calibration,
+    \item a \textit{coverage calibration curve} comparing observed vs. nominal credible interval coverage across levels from 10\% to 90\%,
+    \item a \textit{residuals vs. DOY plot} to diagnose systematic seasonal bias,
+    \item and the \textit{Continuous Ranked Probability Score} (CRPS), which jointly penalizes both sharpness and miscalibration.
+\end{enumerate}
+
+% Describe your full modeling and analysis pipeline, and how your tasks were structured end-to-end. Include a flowchart or diagram to visualize your workflow.
+% \begin{itemize}
+%     \item Using the MODIS NDVI product and the CDL as a crop mask, extract and compare NDVI time series for corn and soybean pixels over the growing season within the U.S. Corn Belt (e.g., Iowa, Nebraska).
+%     \item Align CDL annual crop masks with corresponding NDVI for the selected year
+%     \item Calculate mean and interquartile range of NDVI by crop type
+%     \item Visualize seasonal NDVI profiles (phenological curves) for corn vs. soybean, highlighting key growing stage (e.g., planting, greenup, peak greenness, and harvesting)
+% \end{itemize}
+% Expected output: A figure comparing NDVI phenological curves for both crop types, with uncertainty bands, and a brief interpretation of the drivers behind observed patterns.
+
+\subsection{Crop Rotation Pattern Identification}
+\label{sec:pattern_id}
+
+Crop rotation detection is formulated as a pixel-level sequence classification
+problem over the 10-year CDL archive (2015-2024, $T=10$).
+The pipeline has six stages: data preparation, pixel filtering,
+multi-metric computation, Bayesian Markov estimation, three-class rule-based
+classification, and spatial post-processing.
+
+For data preparation we used Annual CDL GeoTIFFs (30~m, EPSG:5070) covering 2015--2024 are stacked into
+a single \texttt{xarray} DataArray of shape $(T,H,W)$ with integer class codes
+using \texttt{rasterio} \citep{rasterio} and \texttt{rioxarray} \citep{rioxarray}.
+All processing is performed at the native 30~m resolution to preserve fine-scale
+field structure; the resulting classified raster is only aggregated to state-level
+area statistics at the final reporting stage.
+
+The filtering of the pixel is designated \emph{corn/soy eligible} if its CDL code is corn (1) or soybean (5) in at least $N_{\min}=7$ of the 10 years.
+Pixels that are persistently non-agricultural, planted to specialty crops, or
+classified as fallow or grassland in the majority of years are excluded from the
+rotation analysis entirely.
+This criterion retains active corn and soybean ground while admitting occasional
+``break years'' attributable to CDL label noise or short-cycle rotational
+diversification \citep{stern2012iowa}.
+Each eligible pixel is then represented by its 10-year crop-type sequence
+\begin{equation}
+    \mathbf{c}_p = (c_{p,1},\,c_{p,2},\,\ldots,\,c_{p,T})
+    \;\in\;\{1,5\}^T.
+\end{equation}
+
+Four complementary scalar metrics are computed for every eligible pixel.
+
+\emph{(a) Alternation score $A_p$.}
+The fraction of adjacent-year transitions that are corn-to-soy or soy-to-corn:
+\begin{equation}
+    A_p \;=\; \frac{1}{T-1}\sum_{t=1}^{T-1}
+    \mathbf{1}\!\bigl[\{c_{p,t},\,c_{p,t+1}\} = \{1,5\}\bigr].
+    \label{eq:alt_score}
+\end{equation}
+$A_p = 1$ for a perfectly alternating sequence and $A_p = 0$ for pure monoculture.
+
+\emph{(b) Pattern edit distance $d_p$.}
+The minimum Hamming distance from the observed sequence to either canonical
+10-year corn-soy pattern, following the RECRUIT framework
+\citep{sahajpal2014recruit}:
+\begin{equation}
+    d_p \;=\; \min_{\mathbf{p}^* \in \mathcal{P}}\;\sum_{t=1}^{T}
+    \mathbf{1}[c_{p,t} \neq p^*_t],
+    \label{eq:edit_dist}
+\end{equation}
+where
+$\mathcal{P} = \{[1,5,1,5,1,5,1,5,1,5],\;[5,1,5,1,5,1,5,1,5,1]\}$
+are the two in-phase canonical patterns.
+A pixel with $d_p = 0$ matches a canonical pattern exactly; $d_p = 2$ indicates
+at most two break years in the decade.
+
+\emph{(c) Maximum monoculture run length $R_p$.}
+The longest unbroken consecutive run of a single crop code:
+\begin{equation}
+    R_p \;=\; \max_{k \in \{1,5\}}\;\max_{t}\;
+    \{r : c_{p,t}=c_{p,t+1}=\cdots=c_{p,t+r-1}=k\}.
+    \label{eq:run_length}
+\end{equation}
+A threshold of $R_p \geq 7$ is used to flag persistent monoculture, consistent
+with CDL-based state-level analyses in the Corn Belt \citep{stern2012iowa}.
+
+\emph{(d) Shannon entropy $H_p$.}
+The information entropy of the empirical crop-code distribution over 10 years:
+\begin{equation}
+    H_p \;=\; -\sum_{k \in \{1,5\}} \hat{\pi}_{pk}\log_2\hat{\pi}_{pk},
+    \qquad
+    \hat{\pi}_{pk} \;=\; \frac{1}{T}\sum_{t=1}^{T}\mathbf{1}[c_{p,t}=k].
+    \label{eq:entropy}
+\end{equation}
+$H_p$ peaks at 1~bit for a perfectly balanced corn-soy split and approaches 0
+for monoculture, providing an independent cross-check on both $A_p$ and $R_p$.
+
+We used Bayesian Markov transition estimation, to obtain smoothed transition-probability estimates for pixels with fewer than
+10 eligible years, we fit a per-pixel Bayesian first-order Markov chain following
+\citet{welton2005} and the standardized rotation-mapping framework of
+\citet{nandan2026rotation}.
+Let $n_{jk}^{(p)} = \sum_{t=1}^{T-1}\mathbf{1}[c_{p,t}=j,\,c_{p,t+1}=k]$
+denote the raw transition count from crop $j$ to crop $k$ at pixel $p$.
+Under the Dirichlet-Multinomial conjugate model:
+\begin{equation}
+    \boldsymbol{\theta}^{(p)}_j \sim \mathrm{Dirichlet}(\boldsymbol{\alpha}),
+    \qquad
+    \mathbf{n}^{(p)}_j \mid \boldsymbol{\theta}^{(p)}_j
+    \sim \mathrm{Multinomial}\!\left(N_j^{(p)},\,\boldsymbol{\theta}^{(p)}_j\right),
+    \label{eq:markov_bayes}
+\end{equation}
+with a symmetric Jeffreys prior $\boldsymbol{\alpha} = (0.5,0.5)$.
+The closed-form posterior mean
+$\hat{\theta}^{(p)}_{jk} = (n_{jk}^{(p)} + 0.5)\,/\,(N_j^{(p)} + 1)$
+shrinks raw frequency estimates toward $0.5$ for short sequences,
+stabilising the alternation signal for marginal pixels.
+The posterior self-transition probability $\hat{\theta}^{(p)}_{kk}$ serves as a
+diagnostic: regular rotators have $\hat{\theta}_{kk}<0.15$ for both crops,
+whereas monoculture pixels exhibit $\hat{\theta}_{kk}>0.85$.
+
+Pixels are assigned to one of three mutually exclusive rotation classes using the
+following hierarchical rule applied in priority order:
+
+\begin{enumerate}[label=(\roman*)]
+    \item \textbf{Regular rotation}: $A_p \geq 0.70$ \emph{and} $d_p \leq 2$
+          \emph{and} at least 7 of 10 years in $\{1,5\}$.
+    \item \textbf{Monoculture}: $R_p \geq 7$ \emph{or}
+          $\hat{\pi}_{pk} \geq 0.80$ for some $k \in \{1,5\}$.
+    \item \textbf{Irregular cropping}: all remaining eligible pixels.
+\end{enumerate}
+
+The alternation-score threshold of 0.70 and run-length threshold of 7 were set
+a priori based on published thresholds for Iowa CDL data \citep{stern2012iowa}
+and cross-validated against state-level rotation statistics from USDA NASS
+predictive CDL uncertainty layers \citep{nass_markov}.
+The edit-distance ceiling of 2 permits at most two break years per decade,
+accommodating the 5--10\% per-class CDL labelling error documented by
+\citet{cdl_cropscape}.
+
+Finally a spatial post-processing and areal statistics was calculated.
+A $3{\times}3$ majority filter is applied to the classified raster to suppress
+CDL's characteristic salt-and-pepper artefacts at field boundaries
+\citep{wardlow2007modis}, consistent with the spatial coherence approach of
+\citet{nandan2026rotation}.
+Following filtering, per-pixel classification labels are aggregated to state-level
+cropland area (Mha) using the 30~m pixel area of $900\;\mathrm{m}^2$.
+The proportion of eligible corn/soy cropland under each rotation class is then
+reported alongside per-state Bayesian-Markov self-transition statistics.
+
+\subsection{Soil Moisture Anomaly Calculation}
+\label{sec:anomaly}
+To detect unusual soil moisture conditions during two contrasting extreme events--the \textit{2019 Midwest flood} (April--July) and the \textit{2022 Great Plains flash drought} (June--August) we compute per-pixel anomaly scores against a multi-year baseline, using both a standard z-score and a Bayesian approach that accounts for the short length of the SMAP record.
+
+Weekly SMAP L4 surface soil moisture composites (m$^3$\,m$^{-3}$, 9\,km resolution) are loaded from the processed Parquet files described in Section~\ref{sec:data}, covering 2015--2025. The analysis is spatially restricted to the ${\sim}2.08$ million rotation-eligible pixels identified in Task~2, ensuring consistent alignment across tasks. CDL crop labels from the event year (2019 or 2022) are attached to each pixel so that crop-stratified results reflect actual planted cover during the event rather than a fixed reference year. Four crop classes are tracked: corn (1), soybean (5), winter wheat (26), and oats (28).
+
+For each pixel and ISO week-of-year, we compute a baseline mean and standard deviation using observations from 2015--2021 at most seven data points per pixel per week. Because this baseline is short, raw frequency estimates can be unreliable, particularly for pixels with missing observations.
+
+To handle the short baseline honestly, we fit a Normal-Inverse-Gamma (NIG) conjugate model per pixel per week. Rather than assuming a fixed mean and variance, the NIG model treats both as uncertain and updates them from the available observations. The posterior predictive distribution for a new observation is a Student-t, whose heavier tails make anomaly scores more conservative than a standard Gaussian z-score when the baseline is limited \cite{xu2018ssi}. Across the study area, the median posterior degrees of freedom is 11.0 and the median predictive scale is 0.045$\sim$m$^3$\,m$^{-3}$.
+
+Prior hyperparameters are set to be weakly informative: the prior mean is anchored to the regional average for each week, and the prior variance is anchored to the cross-pixel spread, following \cite{gelman2008weakly}. This regularizes pixels with sparse baselines while allowing data-rich pixels to govern their own estimates.
+
+Three scores are computed for each pixel-week during the event period:
+\begin{enumerate}
+    \item \textit{Frequentist z-score}: the standard deviation departure from the baseline mean, retained as a simple comparison baseline.
+    \item \textit{NIG two-tailed p-value}: the probability of observing a value at least as extreme as the observed one under the posterior predictive. Values near 0 flag extreme anomalies in either direction.
+    \item \textit{NIG drought exceedance}: the posterior predictive percentile of the observation. Values near 0 indicate extremely dry conditions; values near 1 indicate extremely wet conditions.
+\end{enumerate}
+
+The posterior predictive scale is retained as an uncertainty flag: pixels with high scale have sparse baselines and their anomaly scores should be interpreted with caution.
+
+Anomaly scores are aggregated by crop type and state across the 13-state Corn Belt. For each stratum we report the mean z-score, the fraction of pixel-weeks exceeding $z > 1$ and $z > 1.5$, and the 
+fraction of pixel-weeks with a drought exceedance below 0.10--a severity threshold analogous to USDA Drought Monitor D1/D2 classification.
+
+\subsection{Crop Mapping Prediction Model}
+\label{sec:mapping_pred}
+
+The final task formulates crop-type prediction as a supervised multi-class
+classification problem: given per-pixel features derived from CDL planting
+history, NDVI phenology, and SMAP soil moisture, predict the crop planted in
+a held-out future year.  The pipeline has five stages: feature engineering,
+model specification, temporal holdout evaluation, ablation study, and
+interpretability analysis.
+
+Target classes and study domain using four mutually exclusive pixel-level classes are defined from CDL codes:
+\emph{corn}~(1), \emph{soybean}~(5), \emph{winter wheat}~(24), and
+\emph{other cropland} (all remaining codes $\leq 61$).
+The analysis covers the same 13-state Corn Belt footprint as Tasks~2
+and~3, on a $2960 \times 4096$ pixel grid at ${\sim}557$~m resolution
+(EPSG:5070).
+A pixel is included if it is classified as cropland ($\text{code} \leq 61$)
+in at least three of the ten CDL years 2013--2022.
+
+Each training sample corresponds to one pixel in one year, described by 38
+features drawn from three complementary data sources:
+
+\begin{enumerate}[label=(\roman*)]
+    \item \textbf{CDL history (19 features):} lag codes
+          $c_{t-1},\ldots,c_{t-5}$; pairwise transition counts
+          (corn$\to$soy, soy$\to$corn, other); time since last corn and
+          soybean; crop fractions; and the sequence-level metrics from
+          Task~2 --- alternation score~$A_p$, edit distance~$d_p$,
+          entropy~$H_p$, and max run length~$R_p$
+          (Section~\ref{sec:pattern_id}).
+          A $3{\times}3$ neighbourhood corn/soy fraction provides local
+          spatial context.
+
+    \item \textbf{NDVI phenology (15 features):} from the processed NDVI
+          weekly Parquet (Section~\ref{sec:data}), we extract per-pixel
+          base NDVI (10th percentile), peak NDVI, amplitude, mean,
+          cumulative integral, peak week, green-up week and slope, and
+          seasonal-third means (early/mid/late growing season).
+          Historical peak-NDVI mean and standard deviation across prior
+          years capture inter-annual stability, following the feature
+          design of \citet{cai2018crop}.
+
+    \item \textbf{SMAP soil moisture (4 features):} growing-season mean,
+          spring-planting-window mean, and the fractions of growing-season
+          weeks classified as ``wet'' ($> 75$th percentile) or ``dry''
+          ($< 25$th percentile) relative to each pixel's own distribution.
+          Because SMAP begins in 2015, training samples from 2013--2014
+          carry missing values for these features.
+\end{enumerate}
+
+
+We train a \textit{LightGBM} gradient-boosted decision tree classifier
+\citep{ke2017lightgbm} with $K = 500$ estimators, learning rate 0.05,
+maximum depth~7, and 63 leaves.
+Column and row sub-sampling are both set to 0.8 to limit overfitting.
+Class imbalance is handled by the \texttt{is\_unbalance} flag, which
+re-weights each class inversely proportional to its frequency, combined
+with stratified sampling of 125{,}000 pixels per class per year during
+panel construction.
+LightGBM handles missing values natively, which is critical for the SMAP
+features absent in 2013--2014 and the NDVI historical statistics that
+require at least two prior years.
+
+The evaluation follows a strict temporal holdout protocol motivated by the
+crop-prediction setting, where models must generalise forward in time
+\citep{zhang2019cropprediction, abernethy2023csb}:
+training uses all years up to and including 2021 (${\sim}4.5$M samples),
+validation is the year 2022 (500{,}000 samples), and the final test is the
+year 2023 (500{,}000 samples).
+No future-year features are ever available at prediction time; features for
+year $t$ are computed solely from data in years $\leq t{-}1$ (CDL history)
+or the concurrent growing season (NDVI, SMAP).
+Early stopping at 50 rounds on the validation set prevents overfitting.
+
+
+To quantify each data source's marginal contribution, four nested
+configurations are evaluated on the 2022 validation set:
+\begin{enumerate}[label=\Alph*.]
+    \item CDL history only (19~features);
+    \item CDL + NDVI (34~features);
+    \item CDL + SMAP (23~features);
+    \item CDL + NDVI + SMAP (38~features, full model).
+\end{enumerate}
+
+Post-hoc feature importance is computed using \textit{SHAP TreeExplainer}
+\citep{lundberg2017shap} on a stratified subsample of 1{,}000 test
+pixels.
+SHAP values decompose each prediction into per-feature contributions,
+enabling direct comparison of importance across the CDL, NDVI, and SMAP
+feature groups.
+Additionally, model performance is stratified by the three rotation regimes
+identified in Task~2 regular, monoculture, and irregular to assess
+how agronomic context affects predictability.
+
+For the evaluation metrics,
+Classification quality is measured by overall accuracy (OA), macro-averaged
+F1-score (unweighted mean of per-class F1), per-class F1 scores, and the
+full $4 \times 4$ confusion matrix.
+Spatial prediction maps are generated by scattering pixel-level predictions
+onto the analysis raster and overlaying 13-state boundaries for geographic
+context.
+
+
+
+\section{Results}
+\label{sec:results}
+\subsection{NDVI Time Series Analysis by Crop Type Results}
+\label{sec:time_series_results}
+Figure~\ref{fig:ndvi_input} shows the raw per-year weekly mean NDVI values pooled across all 18 years (2008--2025). Even before modeling, the three crop types exhibit visually distinct seasonal trajectories: corn and soybean both rise steeply through June and peak in mid-summer, while winter wheat displays an earlier, lower, and more variable profile reflecting its cool-season growth cycle.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{figures/task1/ndvi_input_scatter.png}
+    \caption{\textit{Per-year weekly mean NDVI by crop type, pooled across 2008--2025. Each point represents one crop-type-week-year combination.}}
+    \label{fig:ndvi_input}
+\end{figure}
+
+Figure~\ref{fig:hsgp_phenology} shows the HSGP posterior phenological curves for all three crops. Corn peaks at NDVI 0.930 around DOY 204 (July 22), coinciding with tasseling and peak canopy closure. Soybean peaks slightly later and higher at NDVI 0.938 around DOY 226 (August 14), consistent with its later reproductive stages (R3--R5). Winter wheat diverges sharply, peaking at only NDVI 0.804 around DOY 147 (May 26) --- roughly two months earlier than either warm-season crop. Posterior IQR bands are narrow for corn and soybean, reflecting a confident seasonal fit, while the wider empirical spatial IQR (dashed) captures genuine field-to-field variability the model smooths over. Winter wheat shows the widest empirical spread, consistent with greater heterogeneity in planting dates and regional climate across the study area.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.5\textwidth]{figures/task1/hsgp_phenology_crops.png}
+    \caption{\textit{HSGP posterior phenological curves for corn, soybean, and winter wheat across the Corn Belt (2008--2025). Solid lines show the posterior mean; darker shaded bands show the posterior predictive IQR (25th--75th percentile); lighter bands show the 90\% credible interval. Dashed lines show the empirical spatial IQR across pixels. Annotated growing stage windows follow standard agronomic definitions.}}
+    \label{fig:hsgp_phenology}
+\end{figure}
+
+Figure~\ref{fig:pheno_features} shows inter-annual variability in peak DOY, peak NDVI, and green-up slope across all 18 years. Corn and soybean are stable in peak timing (SD = 11.2 and 7.8 days) and peak NDVI (0.93--0.95), while winter wheat is consistently earlier, lower (peaking 10--15 NDVI points below the warm-season crops), and far more variable (SD = 32.2 days), reflecting sensitivity to fall planting conditions and spring temperatures. Green-up slope tells a similar story: corn and soybean rise steadily at $\sim$0.07--0.08 NDVI units per 30 days, while winter wheat is both slower and more erratic year-to-year.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{figures/task1/phenological_features_by_year.png}
+    \caption{\textit{Inter-annual phenological features by crop type (2008--2025): peak day-of-year (left), peak NDVI (center), and green-up slope in NDVI units per 30 days (right).}}
+    \label{fig:pheno_features}
+\end{figure}
+
+Table~\ref{tab:task1_eval} reports evaluation metrics for all three crops. Point errors are low across the board (RMSE: 0.019, 0.018, 0.023 for corn, soybean, and wheat). The 90\% credible intervals are well-calibrated ($\sim$90\% observed coverage), while 50\% intervals are mildly conservative (51--59\% observed vs.\ 50\% nominal). CRPS values of 0.010--0.013 confirm accurate, well-calibrated probabilistic predictions. Winter wheat is the weakest performer across all metrics, consistent with its more irregular seasonal trajectory.
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{lrrrrr}
+\hline
+\textbf{Crop} & \textbf{RMSE} & \textbf{MAE} 
+    & \textbf{50\% Cov.} & \textbf{90\% Cov.} & \textbf{CRPS} \\
+\hline
+Corn         & 0.0194 & 0.0146 & 59.4\% & 90.1\% & 0.0107 \\
+Soybean      & 0.0183 & 0.0141 & 56.6\% & 91.2\% & 0.0101 \\
+Winter Wheat & 0.0232 & 0.0184 & 51.4\% & 91.0\% & 0.0131 \\
+\hline
+\end{tabular}
+\caption{\textit{HSGP model evaluation metrics for each crop type. Coverage 
+columns report the fraction of observed weekly means falling within 
+the posterior predictive 50\% and 90\% credible intervals respectively.}}
+\label{tab:task1_eval}
+\end{table}
+
+Figure~\ref{fig:calibration} shows three calibration diagnostics. The PIT histogram is approximately uniform across all crops, with a mild right skew suggesting slight over-prediction at peak NDVI. The coverage curve tracks the diagonal closely, and residuals are symmetric around zero across the full DOY range--together confirming good calibration and no systematic seasonal bias.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{figures/task1/calibration_diagnostics.png}
+    \caption{\textit{Calibration diagnostics for the three HSGP models. Left: 
+    PIT histogram (uniform = well-calibrated). Center: coverage 
+    calibration curve (diagonal = perfect calibration). Right: 
+    residuals vs.\ day-of-year.}}
+    \label{fig:calibration}
+\end{figure}
+    
+% \begin{itemize}
+%     \item How do NDVI seasonal profiles differ between corn and soybean, and what phenological features best distinguish the two crop types across years?
+% \end{itemize}
+
+\subsection{Crop Rotation Pattern Identification Results}
+\label{sec:pattern_id_results}
+Figure~\ref{fig:rotation_metrics} shows the empirical distributions of all four
+rotation metrics across the 2,084,112 eligible pixels.
+The alternation score $A_p$ exhibits a bimodal distribution with a dominant peak
+near $A_p = 1.0$ (pixels in near-perfect alternation) and a secondary peak near
+$A_p = 0.0$ (persistent monoculture), with substantial mass spread across
+intermediate values corresponding to irregular cropping.
+The median alternation score among eligible pixels is 0.50.
+Pattern edit distance $d_p$ has its mode near $d_p = 5$--$6$, reflecting the
+large proportion of eligible pixels that deviate substantially from canonical
+alternation templates; the strict classification threshold of $d_p \leq 3$
+captures only the left tail of this distribution.
+Maximum run length $R_p$ concentrates at $R_p = 2$--$3$ (short runs typical of
+alternating or diverse sequences), with a long right tail extending to $R_p = 10$
+(full-decade monoculture).
+Shannon entropy $H_p$ peaks near 1.2 bits, reflecting the mixed crop histories
+prevalent among eligible pixels in the 13-state study area.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.75\textwidth]{figures/task2/task2__metric_histograms.png}
+    \caption{\textit{Empirical distributions of the four rotation metrics across
+    all 2,084,112 rotation-eligible pixels.
+    Top left: alternation score $A_p$ (bimodal, peaks near 0 and 1).
+    Top right: pattern edit distance $d_p$ (mode near 5--6).
+    Bottom left: maximum run length $R_p$ (concentrated at 2--3).
+    Bottom right: Shannon entropy $H_p$ (peak near 1.2 bits).}}
+    \label{fig:rotation_metrics}
+\end{figure}
+
+Figure~\ref{fig:sensitivity} shows how the proportion of eligible pixels
+classified as regular rotation varies across a grid of alternation-score and
+edit-distance thresholds.
+Under the strict primary rule ($A_p \geq 0.70$, $d_p \leq 3$), approximately
+28\% of eligible pixels are classified as regular rotation.
+Relaxing the thresholds to $A_p \geq 0.50$ and $d_p \leq 6$ raises the regular
+share to approximately 60\%, while the monoculture fraction remains constant
+across all 20 threshold combinations (${\sim}6\%$ on raw labels) --- confirming
+the orthogonality of the persistence and template-match classification axes.
+This sweep demonstrates that the ``irregular'' label is threshold-sensitive and
+should be interpreted as ``does not meet the strict alternation template,'' not
+as agronomically disordered.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.75\textwidth]{figures/task2/task2__threshold_sensitivity_regular_pct.png}
+    \caption{\textit{Sensitivity of the regular-rotation class share to the
+    alternation-score threshold ($A_p$ minimum) and edit-distance ceiling ($d_p$
+    maximum). Monoculture share is invariant across all grid points (orthogonal
+    axis). The primary YAML thresholds ($A_p \geq 0.70$, $d_p \leq 3$) yield
+    ${\sim}28\%$ regular; the most relaxed corner ($A_p \geq 0.50$, $d_p \leq 6$)
+    reaches ${\sim}60\%$.}}
+    \label{fig:sensitivity}
+\end{figure}
+
+The empirical Markov transition matrix (Table~\ref{tab:markov}) reveals
+asymmetric crop switching behaviour across the 13-state footprint.
+The soy-to-corn transition probability ($P = 0.60$) exceeds the corn-to-soy
+rate ($P = 0.55$), indicating a mild preference for returning to corn after
+a soybean year.
+Critically, ``other'' crop years are moderately self-sustaining
+($P(\text{other}\to\text{other}) = 0.36$), explaining how break years
+accumulate and inflate the irregular class under strict alternation templates.
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{lccc}
+\hline
+\textbf{From $\backslash$ To} & \textbf{Corn} & \textbf{Soy} & \textbf{Other} \\
+\hline
+Corn  & 0.308 & 0.554 & 0.138 \\
+Soy   & 0.600 & 0.238 & 0.162 \\
+Other & 0.339 & 0.300 & 0.361 \\
+\hline
+\end{tabular}
+\caption{\textit{Empirical Markov transition probabilities $P(\text{to} \mid \text{from})$
+across all rotation-eligible pixel-years in the 13-state Corn Belt
+(2015--2024).}}
+\label{tab:markov}
+\end{table}
+
+Figure~\ref{fig:rotation_map} presents the smoothed classified rotation map
+across the 13-state Corn Belt study area.
+Regular corn-soy rotation (green) concentrates in the Iowa--Illinois--Indiana
+corridor the geographic core of the Corn Belt where annually alternating
+fields form spatially coherent blocks visible at the county scale.
+Monoculture patches (orange) cluster along the western margin of the study area,
+particularly in the irrigated districts of western Nebraska and central Kansas,
+where continuous corn has long been economically viable under centre-pivot
+irrigation.
+Irregular cropping (purple) is most prevalent in North Dakota (85.9\% of
+eligible pixels), Wisconsin (81.0\%), and Michigan (83.5\%), consistent with
+the more diverse crop mix and transitional agro-ecological character of these
+states at the margins of the Corn Belt.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.75\textwidth]{figures/task2/task2__rotation_map__smoothed__20260412.png}
+    \caption{\textit{Smoothed ($3{\times}3$ majority filter) rotation class map
+    across the 13-state Corn Belt study area, derived from the 10-year CDL
+    record (2015--2024).
+    Green: regular corn-soy rotation.
+    Orange: monoculture (corn or soybean dominant).
+    Purple: irregular cropping.
+    State boundaries are shown in grey.
+    The Iowa--Illinois corridor exhibits the highest regular-rotation density,
+    consistent with its role as the agronomic core of the U.S. Corn Belt.}}
+    \label{fig:rotation_map}
+\end{figure}
+
+Table~\ref{tab:rotation_area} summarises the per-state areal distribution of
+rotation classes across all eligible corn/soy cropland on the analysis grid.
+Across all 13 states, 27.4\% of eligible grid cells (570{,}202 pixels;
+${\sim}17{,}669 \times 10^3$~ha) are classified as regular corn-soy rotation,
+3.9\% (81{,}308 pixels; ${\sim}2{,}520 \times 10^3$~ha) as monoculture,
+and 68.7\% (1{,}432{,}602 pixels; ${\sim}44{,}393 \times 10^3$~ha) as
+irregular cropping.
+Illinois and Iowa exhibit the highest regular-rotation rates (40.4\% and
+39.9\% respectively), consistent with their status as the prototypical Corn Belt
+states where the corn-soy alternation is a deeply embedded agronomic norm
+\citep{stern2012iowa}.
+Nebraska shows the highest monoculture rate (12.0\%), consistent with irrigated
+continuous corn in western Nebraska.
+North Dakota has the highest irregular rate (85.9\%), reflecting the prevalence
+of small grains, hay, and other non-corn/soy crops in its northern
+agro-ecological zone.
+Figure~\ref{fig:areal_stats} visualises these state-level proportions.
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{lrrrr}
+\hline
+\textbf{State}
+  & \textbf{Regular (\%)}
+  & \textbf{Monoculture (\%)}
+  & \textbf{Irregular (\%)}
+  & \textbf{n pixels} \\
+\hline
+Illinois      & 40.35 &  5.07 & 54.58 & 293{,}524 \\
+Iowa          & 39.87 &  6.93 & 53.20 & 321{,}601 \\
+Indiana       & 34.29 &  4.23 & 61.48 & 156{,}899 \\
+Minnesota     & 31.31 &  3.26 & 65.43 & 223{,}678 \\
+South Dakota  & 28.17 &  1.46 & 70.37 & 154{,}733 \\
+Nebraska      & 27.13 & 11.96 & 60.91 & 212{,}194 \\
+Missouri      & 23.12 &  7.24 & 69.64 & 120{,}804 \\
+Ohio          & 22.85 &  5.69 & 71.46 & 120{,}718 \\
+Kentucky      & 20.54 &  3.88 & 75.57 &  38{,}066 \\
+Kansas        & 14.24 &  8.11 & 77.65 & 108{,}705 \\
+Wisconsin     & 13.55 &  5.45 & 81.00 &  81{,}812 \\
+Michigan      & 12.59 &  3.92 & 83.49 &  66{,}989 \\
+North Dakota  & 11.29 &  2.81 & 85.90 & 118{,}282 \\
+\hline
+\textbf{Overall (smoothed)} & \textbf{27.36} & \textbf{3.90} & \textbf{68.74}
+                 & \textbf{2{,}084{,}112} \\
+\hline
+\end{tabular}
+\caption{\textit{Per-state areal statistics for the three rotation classes
+derived from the 10-year CDL record (2015--2024). Percentages are computed over
+rotation-eligible pixels ($\geq 5$ corn/soy years) within each state.
+Pixel counts are on the ${\sim}557$~m analysis grid (${\sim}31$~ha per cell);
+direct comparison with USDA NASS acreage requires accounting for this
+resolution difference. States ordered by decreasing regular-rotation fraction.
+}}
+\label{tab:rotation_area}
+\end{table}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.75\textwidth]{figures/task2/task2__per_state_rotation_classes.png}
+    \caption{\textit{State-level rotation class proportions as stacked horizontal bars.
+    States are ordered by decreasing regular-rotation fraction.
+    Illinois and Iowa lead at ${\sim}40\%$ regular rotation, while North Dakota
+    and Michigan show the lowest rates (${\sim}11$--$13\%$), reflecting their
+    transitional agro-ecological position at the margins of the Corn Belt.}}
+    \label{fig:areal_stats}
+\end{figure}
+
+Figure~\ref{fig:dm_map} shows the Dirichlet-Multinomial posterior probability
+of regular rotation (\texttt{dm\_p\_regular}) across the study area.
+The belt-wide mean posterior probability is 0.23 (median 0.11), substantially
+lower than the 27.4\% strict-regular class share because the Bayesian layer
+answers a narrower question: whether the \emph{corn$\leftrightarrow$soy
+transition counts alone} look alternating under posterior uncertainty, without
+considering Hamming distance, corn/soy year counts, or monoculture screens.
+Approximately 17.2\% of eligible pixels have $P(\text{regular}) > 0.50$.
+The companion posterior-standard-deviation map reveals high epistemic
+uncertainty at the domain edges and in states with fewer corn/soy transition
+years (e.g.\ North Dakota, Michigan), where the Dirichlet posterior for each
+row is diffuse even when the rule-based label is a hard class assignment.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.75\textwidth]{figures/task2/task2__rotation_dm_p_regular__20260412.png}
+    \caption{\textit{Dirichlet-Multinomial posterior probability of regular
+    rotation across the 13-state study area. Warmer colours indicate higher
+    posterior probability that the Bayesian alternation proxy exceeds the
+    0.70 threshold. Mean = 0.23, median = 0.11. Compare with the discrete
+    three-class map in Figure~\ref{fig:rotation_map}.}}
+    \label{fig:dm_map}
+\end{figure}
+
+Finally cross-sensor validation among the CDL-history metrics, the alternation score $A_p$ is the single most
+informative feature for discriminating regular rotation from other classes.
+The edit-distance criterion ($d_p \leq 3$) removes borderline cases pixels
+with near-regular but phase-shifted sequences improving within-class
+coherence.
+Entropy $H_p$ and run length $R_p$ contribute most at the
+monoculture-versus-irregular boundary: entropy discriminates low-diversity
+irregular croppers from true monocultures, while $R_p$ efficiently flags
+persistent monoculture without requiring the full-sequence comparison of the
+edit-distance step.
+
+Spatial context via the $3{\times}3$ majority filter smooths classification
+noise at field boundaries and is most impactful in regions where field sizes
+are small relative to the analysis pixel, such as the diverse landscapes of
+Wisconsin and Michigan.
+
+Although NDVI features are not the primary classification signal for this
+CDL-label-based task, they serve as a powerful independent validation layer.
+Pixels classified as regular rotators by CDL sequence metrics show a
+year-over-year alternation in HSGP-derived peak NDVI and peak DOY
+that mirrors the known 20--25 day offset between corn and soybean phenological
+peaks (Section~\ref{sec:time_series_results}).
+In contrast, monoculture pixels exhibit nearly identical phenological curves
+across all 10 years, consistent with a single crop type occupying the field for
+the full decade.
+This cross-sensor agreement between a purely label-sequence-based rotation
+classifier and an independent NDVI phenological model validates the
+ecological coherence of the derived rotation classes
+\citep{zeng2016hybrid,nandan2026rotation}.
+
+% ------------------------------------------------------------------
+%  RESULTS
+% ------------------------------------------------------------------
+\subsection{Soil Moisture Anomaly Calculation Results}
+\label{sec:anomaly_results}
+
+We analyse two contrasting events from a single 2015--2021 baseline,
+providing symmetric validation across both tails of the anomaly
+distribution: the \textit{2019 Midwest flood} (April--July, 18 ISO
+weeks, 37.5M pixel-weeks; belt-wide median NIG P(drought) = 0.817,
+wet-shifted) and the \textit{2022 Great Plains flash drought}
+(June--August, 13 ISO weeks, 27.1M pixel-weeks; median P(drought) =
+0.292, dry-shifted).
+
+% ---- 2019 FLOOD ----
+Figure~\ref{fig:flood_nig} shows the NIG posterior predictive P(drought)
+at four spread ISO weeks across the April--July 2019 event window.
+Values near 1 (blue) indicate the observation falls in the wet tail of
+the posterior predictive; values near 0 (red) indicate the dry tail.
+A broad excess-moisture band stretching from Iowa through Illinois and
+Indiana is established by mid-May and persists through July, with the
+strongest wet signals in South Dakota (corn mean $z = +1.16$, mean
+P(drought) = 0.851) and Minnesota (corn mean $z = +1.01$,
+P(drought) = 0.809).
+Iowa the Corn Belt's largest corn producer has a mean NIG
+P(drought) of 0.803 on corn, meaning the typical pixel-week fell near
+the 80th percentile of its historical distribution; 18\% of Iowa corn
+pixel-weeks exceeded $z > 1.5$ (persistently saturated soils),
+consistent with USDA-reported near-record prevented-planting acreage
+\citep{pal2020flood}.
+Kentucky is least affected (corn mean $z = +0.46$), consistent with its
+southeastern position away from the flooding core.
+The fraction of pixel-weeks with P(drought) $< 0.10$ is near zero
+everywhere ($\leq 0.1\%$), confirming no spurious drought signal during
+a wet event a useful sanity check on the Bayesian framework.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.75\textwidth]{figures/task3/task3__midwest_flood_2019__nig_p_drought_4panel__20260412.png}
+    \caption{\textit{NIG posterior predictive P(drought) at four spread
+    ISO weeks during the 2019 Midwest flood (April--July).
+    RdYlBu colormap: red = dry tail (P(drought) $\to 0$); blue = wet
+    tail (P(drought) $\to 1$).
+    Nearly all Corn Belt cropland is in the blue (wet) tail throughout
+    the event, with the Iowa--Illinois--Indiana corridor sustaining
+    P(drought) $> 0.75$ for the full 18-week window
+    \citep{pal2020flood}.}}
+    \label{fig:flood_nig}
+\end{figure}
+
+% ---- 2022 DROUGHT ----
+Figure~\ref{fig:drought_nig} shows NIG P(drought) for the 2022 event.
+A contiguous band of severe dryness (P(drought) near 0, red) stretches
+from Kansas through Nebraska and into western Iowa, coinciding with the
+region where the U.S.\ Drought Monitor escalated conditions from D0 to
+D3+ within weeks during summer 2022 \citep{otkin2018flash}.
+Across all pixel-weeks, 4.9\% are flagged as significant two-tailed
+anomalies ($p < 0.05$) a substantially stronger departure than the
+2019 flood (0.2\%), consistent with the rapid, intense nature of flash
+drought.
+North Dakota is anomalously \emph{wet} (corn mean $z = +0.19$,
+P(drought) = 0.518), confirming the drought was geographically confined
+to the Central and Southern Plains.
+
+Table~\ref{tab:drought_impact} reports the crop-level severity for the
+most-affected strata.
+Kentucky winter wheat is the single hardest-hit stratum (mean
+$z = -1.57$, 42\% of pixel-weeks with P(drought) $< 0.10$), followed
+by Kansas winter wheat (42\%) and Nebraska soybean (41\%).
+Winter wheat consistently shows the strongest drought signal within each
+affected state, likely because it is grown most densely on drought-prone
+western Plains soils and its earlier phenological timing exposes it to
+June heat stress.
+Persistence mapping (fraction of event weeks with $z < -1.5$) reveals
+the most sustained drying along the Kansas--Nebraska corridor, while the
+NIG posterior predictive scale surface exposes elevated epistemic
+uncertainty at domain edges and the northern fringe, where z-score-only
+analyses would overstate confidence.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.75\textwidth]{figures/task3/task3__plains_drought_2022__nig_p_drought_4panel__20260412.png}
+    \caption{\textit{NIG posterior predictive P(drought) at four spread
+    ISO weeks during the 2022 Great Plains flash drought (June--August).
+    Red = dry tail (P(drought) $\to 0$); blue = wet tail.
+    The Central Plains show widespread severe drought probability, while
+    North Dakota and the eastern Corn Belt remain near-neutral}}
+    \label{fig:drought_nig}
+\end{figure}
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{llrrrr}
+\hline
+\textbf{State} & \textbf{Crop}
+  & \textbf{Mean $z$}
+  & \textbf{Mean P(dr.)}
+  & \textbf{Frac P(dr.)$<$0.1 (\%)}
+  & \textbf{$n$ pix-wks} \\
+\hline
+Kentucky     & winter wheat & $-1.57$ & 0.234 & 42.0 &   49{,}543 \\
+Kansas       & winter wheat & $-1.06$ & 0.255 & 41.7 &   57{,}694 \\
+Nebraska     & soybean      & $-1.05$ & 0.239 & 40.5 &  947{,}648 \\
+Nebraska     & corn         & $-1.02$ & 0.238 & 37.0 & 1{,}552{,}980 \\
+Kansas       & corn         & $-1.00$ & 0.249 & 35.7 &  618{,}397 \\
+Kentucky     & corn         & $-1.34$ & 0.281 & 37.1 &  187{,}174 \\
+Indiana      & corn         & $-0.94$ & 0.285 & 28.3 &  872{,}508 \\
+Iowa         & corn         & $-0.64$ & 0.345 & 24.5 & 2{,}133{,}586 \\
+North Dakota & corn         & $+0.19$ & 0.518 &  3.2 &  348{,}335 \\
+\hline
+\end{tabular}
+\caption{\textit{State $\times$ crop anomaly statistics for the 2022
+flash drought. ``Frac P(dr.)$<$0.1'' is the share of pixel-weeks
+where the NIG P(drought) falls below 0.10 --- analogous to USDM
+D1/D2 framing.
+North Dakota's positive mean~$z$ confirms the drought was confined to
+the Central and Southern Plains.}}
+\label{tab:drought_impact}
+\end{table}
+
+% ---- CROSS-EVENT COMPARISON ----
+The two events provide \textit{mirror-image validation}: the 2019 flood
+pushes NIG P(drought) toward 1 (wet tail; belt-wide median 0.817)
+while the 2022 drought pushes it toward 0 (dry tail; median 0.292).
+Both spatial patterns match documented USDA and USDM records,
+confirming that the NIG framework produces directionally correct and
+geographically specific anomaly assessments from a short baseline.
+Scatter plots of frequentist $z$ versus NIG
+$-\log_{10}(p_{\text{anomaly}})$ (Figure~\ref{fig:scatter_2022})
+reveal that data-rich pixels cluster near the diagonal (both methods
+agree), while baseline-sparse pixels diverge: the NIG's heavier
+Student-t tails ($\text{df} \approx 11$) correctly dampen significance,
+preventing false positives in precisely the regions where
+$\hat{\sigma}$ from 5--7 observations is least reliable.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.75\textwidth]{figures/task3/task3__plains_drought_2022__zscore_vs_nig_scatter__20260412.png}
+    \caption{\textit{Frequentist z-score vs.\
+    $-\log_{10}(\text{NIG two-tailed } p)$ at the peak drought week
+    (2022), colored by NIG posterior predictive scale.
+    Data-rich pixels (dark) cluster near the diagonal;
+    baseline-sparse pixels (bright) show the NIG's conservative
+    adjustment.}}
+    \label{fig:scatter_2022}
+\end{figure}
+
+The NIG P(drought) output is directly actionable:
+\emph{``37\% of Nebraska corn pixel-weeks had drought probability below
+the 10th percentile of the Bayesian historical distribution''}
+is a statement a crop insurance assessor or county extension agent can
+use without further statistical translation.
+During the 2019 flood, Iowa saw 18\% of corn pixel-weeks with
+$z > 1.5$ (persistently saturated soils), consistent with
+USDA-reported near-record prevented-planting acreage.
+Overlaying these anomaly outputs with the Task~2 rotation classification
+reveals which management systems face the greatest weather-induced
+disruption: regular rotators missing a planting window often shift to
+soybeans, introducing break years detectable as ``irregular'' in the
+CDL sequence.
+The SMAP anomaly time series also serves as an early-warning predictor
+of NDVI deficits in subsequent weeks \citep{le2024smap_ndvi},
+bridging Tasks~1 and~3 into a unified crop-condition monitoring chain.
+
+
+% ---- CROSS-EVENT COMPARISON ----
+Figure~\ref{fig:scatter_2022} shows the frequentist z-score versus the
+NIG $-\log_{10}(p_{\text{anomaly}})$ for each pixel at the peak drought
+week, colored by posterior predictive scale.
+Points near the diagonal represent data-rich pixels where the two
+frameworks agree.
+Points \emph{above} the diagonal are baseline-sparse pixels where the
+NIG's heavier tails correctly reduce the significance of moderate
+exceedances, preventing false positives.
+This divergence is the core practical benefit of the Bayesian approach:
+for a 7-year baseline, the Student-t with $\text{df} \approx 11$ is
+materially more conservative than the Normal at the tails, avoiding
+over-flagging in precisely the regions where $\hat{\sigma}$ is least
+reliable.
+
+
+The two events provide \textit{mirror-image validation}: the 2019 flood
+pushes NIG P(drought) toward 1 (wet tail; belt-wide median 0.817) while
+the 2022 drought pushes it toward 0 (dry tail; median 0.292).
+Both spatial patterns match documented USDA and USDM records,
+confirming that the NIG framework produces directionally correct and
+geographically specific anomaly assessments from a short baseline.
+
+\subsection{Crop Mapping Prediction Model Results}
+\label{sec:mapping_results}
+
+Table~\ref{tab:ablation} reports validation-year (2022) accuracy for all
+four feature configurations.
+CDL history alone achieves 80.6\% overall accuracy and 0.808 macro~F1,
+establishing a strong baseline driven primarily by the most recent
+prior-year CDL code.
+Adding NDVI phenology features (configuration~B) raises accuracy by
+$+1.7$~pp and macro~F1 by $+1.6$~pp, with the largest per-class gains
+on winter wheat ($+3.2$~pp~F1), whose earlier green-up and peak timing
+clearly separate it from the warm-season crops.
+Adding SMAP soil moisture alone (configuration~C) yields only
+$+0.07$~pp over CDL-only --- statistically marginal, likely because the
+9~km native SMAP resolution renders soil moisture features nearly constant
+across neighbouring pixels.
+The full model~(D) performs comparably to the CDL+NDVI configuration,
+confirming that NDVI phenology is the primary value-add beyond CDL
+history.
+Figure~\ref{fig:ablation_bars} visualises the ablation comparison.
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{lrrrrrr}
+\hline
+\textbf{Config.} & \textbf{OA} & \textbf{Macro F1}
+  & \textbf{F1\,oth.} & \textbf{F1\,corn} & \textbf{F1\,soy}
+  & \textbf{F1\,wheat} \\
+\hline
+A\;(CDL)          & 0.806 & 0.808 & 0.903 & 0.728 & 0.753 & 0.849 \\
+B\;(CDL+NDVI)     & \textbf{0.823} & \textbf{0.825} & 0.906 & 0.749 & 0.763 & \textbf{0.881} \\
+C\;(CDL+SMAP)     & 0.807 & 0.809 & 0.903 & 0.729 & 0.754 & 0.849 \\
+D\;(full)         & 0.823 & 0.824 & 0.904 & \textbf{0.750} & 0.760 & 0.882 \\
+\hline
+\end{tabular}
+\caption{\textit{Ablation study on the 2022 validation set (500{,}000
+pixels). OA = overall accuracy. NDVI phenology (B) adds $+1.7$~pp over
+CDL-only; SMAP (C) adds $+0.07$~pp. The full model (D) matches
+CDL+NDVI.}}
+\label{tab:ablation}
+\end{table}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.75\textwidth]{figures/task4/task4_ablation_comparison.png}
+    \caption{\textit{Validation-year accuracy and macro~F1 for the four
+    ablation configurations. NDVI provides a clear uplift; SMAP
+    contributes marginally at this spatial resolution.}}
+    \label{fig:ablation_bars}
+\end{figure}
+
+Test-year performance for 2023, applying the full model~(D) to the 2023 holdout yields an overall accuracy
+of \textbf{79.2\%} and a macro~F1 of \textbf{0.791}.
+Table~\ref{tab:test_metrics} and the confusion matrix in
+Figure~\ref{fig:test_cm} break this down by class.
+Other cropland is the best-separated class (F1 = 0.893), benefiting from
+the diverse CDL code range that creates a distinct feature signature.
+Winter wheat achieves F1 = 0.813, aided by its phenologically distinct
+earlier green-up captured in the NDVI features
+(Section~\ref{sec:time_series_results}).
+Corn (F1 = 0.726) and soybean (F1 = 0.735) are the hardest to
+distinguish: 30{,}935 soybean pixels are misclassified as corn and 9{,}894
+corn pixels as soybean, making corn$\leftrightarrow$soybean confusion the
+dominant error mode.
+This is consistent with published results for CDL-based crop mapping in
+the Corn Belt \citep{zhong2019deep, cai2018crop}: both crops are
+warm-season row crops grown in similar soils, under similar rotations, and
+with overlapping mid-summer NDVI peaks (Section~\ref{sec:time_series_results}).
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{lrr}
+\hline
+\textbf{Class} & \textbf{F1} & \textbf{$n$ test pixels} \\
+\hline
+Other cropland & 0.893 & 125{,}000 \\
+Corn           & 0.726 & 125{,}000 \\
+Soybean        & 0.735 & 125{,}000 \\
+Winter wheat   & 0.813 & 125{,}000 \\
+\hline
+\textbf{Overall accuracy} & \multicolumn{2}{c}{\textbf{79.2\%}} \\
+\textbf{Macro F1}         & \multicolumn{2}{c}{\textbf{0.791}} \\
+\hline
+\end{tabular}
+\caption{\textit{Per-class F1 scores on the 2023 test set (500{,}000
+stratified pixels, 125{,}000 per class). Overall accuracy 79.2\%,
+macro~F1 0.791.}}
+\label{tab:test_metrics}
+\end{table}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.6\textwidth]{figures/task4/task4_test_confusion_matrix.png}
+    \caption{\textit{Row-normalised confusion matrix for the 2023 test year
+    (model~D). The dominant off-diagonal entries are
+    soybean$\to$corn and corn$\to$soybean, reflecting
+    phenological overlap between the two warm-season crops.}}
+    \label{fig:test_cm}
+\end{figure}
+
+
+SHAP TreeExplainer analysis (Figure~\ref{fig:shap}) reveals three tiers of
+feature importance.
+The most recent prior-year CDL code (\texttt{cdl\_t1}) is the single
+strongest predictor (mean $|\text{SHAP}| = 0.455$): what a farmer planted
+last year is the best indicator of what they will plant next, consistent
+with the inertia observed in the Markov analysis of
+Section~\ref{sec:pattern_id_results}.
+NDVI seasonal means occupy four of the next five ranks
+(\texttt{ndvi\_mid\_mean}, \texttt{ndvi\_peak\_week},
+\texttt{ndvi\_late\_mean}, \texttt{ndvi\_early\_mean}), collectively
+providing the within-season phenological signal that CDL history alone
+cannot capture.
+The highest-ranked SMAP feature (\texttt{smap\_mean\_gs}, rank~8) carries
+meaningful but secondary importance, primarily helping to separate irrigated
+from rain-fed systems and distinguishing winter wheat from corn at broad
+scales.
+These SHAP rankings validate the ablation findings: NDVI is the primary
+value-add, while SMAP provides complementary information at coarser
+granularity.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.75\textwidth]{figures/task4/task4_shap_importance.png}
+    \caption{\textit{Top-25 features ranked by mean $|\text{SHAP}|$ value
+    on a 1{,}000-pixel test subsample. CDL lags, NDVI seasonal
+    means, and SMAP growing-season moisture are the three dominant
+    feature groups.}}
+    \label{fig:shap}
+\end{figure}
+
+
+Leveraging the Task~2 rotation labels
+(Section~\ref{sec:pattern_id_results}), we stratify test-year performance
+by agronomic management context (Table~\ref{tab:regime}).
+Monoculture pixels are the easiest to classify (95.5\% accuracy): when the
+same crop has been planted for seven or more consecutive years, the CDL lag
+codes are near-deterministic.
+Regular-rotation pixels achieve 87.4\% accuracy, with corn and soybean F1
+scores of 0.88 and 0.91 respectively --- the alternation pattern is highly
+informative, and NDVI features reinforce the annual corn$\leftrightarrow$soybean
+flip.
+Irregular-rotation pixels are the hardest (70.9\% accuracy): unpredictable
+crop sequences diminish the value of CDL history, making NDVI and SMAP
+features relatively more important for disambiguation.
+This stratification highlights that model performance is not uniform across
+the agricultural landscape and that residual errors concentrate in regions
+with the most diverse and variable cropping practices.
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{lrrr}
+\hline
+\textbf{Regime} & \textbf{$n$ pixels} & \textbf{OA} & \textbf{Macro F1} \\
+\hline
+Monoculture       & 124{,}318 & \textbf{0.956} & 0.802 \\
+Regular rotation  &  65{,}574 & 0.874 & 0.559 \\
+Irregular         & 310{,}108 & 0.709 & 0.658 \\
+\hline
+\end{tabular}
+\caption{\textit{Test-year accuracy stratified by Task~2 rotation
+regime. Monoculture pixels are near-deterministic; irregular pixels,
+where CDL history is least predictive, present the greatest challenge.
+The low macro~F1 for regular rotation reflects the near-absence of
+other-cropland and winter-wheat pixels within that stratum, not poor
+corn/soy performance.}}
+\label{tab:regime}
+\end{table}
+
+Looking at the spatial prediction maps,
+Figure~\ref{fig:pred_map} presents side-by-side true (CDL) and predicted
+crop-type maps for the 2023 test year across the 13-state Corn Belt.
+The predicted map reproduces the broad spatial patterns of the CDL ground
+truth: the corn--soybean core of the Iowa--Illinois--Indiana corridor, the
+continuous-corn districts of western Nebraska, and the winter-wheat
+concentration in central Kansas.
+An agreement map (not shown) confirms that disagreement pixels are
+spatially diffuse rather than concentrated in specific regions, suggesting
+that errors reflect local ambiguity rather than systematic geographic bias.
+Overall, 396{,}028 of 500{,}000 test pixels (79.2\%) are correctly
+classified.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{figures/task4/task4_crop_maps_pred_vs_true.png}
+    \caption{\textit{True (CDL) vs.\ predicted crop-type maps for the
+    2023 test year across the 13-state Corn Belt. State boundaries
+    are overlaid for geographic reference. The model captures the
+    dominant spatial patterns of corn (orange), soybean (green),
+    winter wheat (purple), and other cropland (grey).}}
+    \label{fig:pred_map}
+\end{figure}
+
+Task~4 directly builds on the preceding analyses.
+The CDL history features reuse the processed stack from Task~2; the NDVI
+phenology features derive from the same weekly Parquet underpinning
+Task~1's HSGP models; and the SMAP soil moisture features are computed
+from the same data as Task~3's anomaly scores.
+The rotation-regime stratification in Table~\ref{tab:regime} is a concrete
+demonstration of how the rotation classification developed in Task~2
+provides actionable context for model evaluation.
+Looking forward, the SMAP-based anomaly indicators from Task~3 could serve
+as early-warning inputs for in-season crop-type updating, bridging the
+post-hoc classification approach presented here with an operational
+monitoring pipeline \citep{le2024smap_ndvi}.
+
+
+
+\section{Discussion and Conclusion}
+\label{sec:disc}
+
+This project set out to answer four progressive research questions about
+crop systems in the U.S.\ Corn Belt, using three complementary remote-sensing
+datasets (CDL, MODIS NDVI, and SMAP L4 soil moisture) within a single,
+reproducible pipeline.  We revisit each question below, summarise limitations,
+and outline directions for future work.
+
+\paragraph{Task 1 — How do corn and soybean NDVI phenologies differ?}
+The HSGP Bayesian phenological model recovers smooth, uncertainty-aware
+seasonal curves that clearly separate all three target crops.
+Corn peaks at NDVI~0.930 around DOY~204 (late July), soybean peaks
+slightly later and higher at NDVI~0.938 around DOY~226 (mid-August), and
+winter wheat peaks two months earlier at NDVI~0.804 around DOY~147 (late May).
+Model evaluation shows low RMSE (0.019--0.023), well-calibrated 90\%
+credible intervals (${\sim}90\%$ observed coverage), and CRPS values of
+0.010--0.013 across all three crops
+(Table~\ref{tab:task1_eval}, Figure~\ref{fig:hsgp_phenology}).
+The phenological features extracted here --- peak DOY, peak NDVI, green-up
+slope --- serve as direct inputs to the crop-type classifier in Task~4,
+demonstrating the pipeline's cross-task coherence.
+
+\paragraph{Task 2 — What crop rotation patterns exist over a 10-year CDL record?}
+Applying a hierarchical rule-based classifier with four sequence metrics
+to 2.08~million eligible pixels, we find that 27.4\% follow strict annual
+corn--soy rotation (concentrated in the Iowa--Illinois--Indiana corridor),
+3.9\% are monoculture (clustered in western Nebraska's irrigated districts),
+and 68.7\% are irregular (Table~\ref{tab:rotation_area},
+Figure~\ref{fig:rotation_map}).
+The Bayesian Dirichlet-Multinomial posterior probabilities
+(Figure~\ref{fig:dm_map}) provide pixel-level uncertainty that the hard
+classification alone cannot express, with epistemic uncertainty highest at
+domain edges and in states with shorter corn/soy histories.
+Threshold sensitivity analysis (Figure~\ref{fig:sensitivity}) confirms
+that the irregular label is threshold-sensitive; it signals deviation from
+a strict template, not necessarily agronomic disorder.
+
+\paragraph{Task 3 — Where did soil moisture anomalies occur during the
+2019 flood and 2022 drought?}
+The NIG conjugate Bayesian framework produces directionally correct and
+geographically specific anomaly assessments from a seven-year baseline.
+During the 2019 Midwest flood, the belt-wide median NIG P(drought) was
+0.817 (wet-shifted), with Iowa corn seeing 18\% of pixel-weeks at
+$z > 1.5$ (Figure~\ref{fig:flood_nig}).
+During the 2022 Plains drought, Kentucky winter wheat was the
+hardest-hit stratum (mean $z = -1.57$, 42\% of pixel-weeks with
+P(drought) $< 0.10$; Table~\ref{tab:drought_impact}).
+The two events provide mirror-image validation across both tails of the
+anomaly distribution, and scatter diagnostics
+(Figure~\ref{fig:scatter_2022}) confirm that the NIG's heavier
+Student-$t$ tails correctly dampen significance for baseline-sparse
+pixels, preventing false positives where a simple z-score would overstate
+confidence.
+
+\paragraph{Task 4 — Can we predict crop type from multi-source features?}
+A LightGBM classifier trained on 38 features (CDL history, NDVI
+phenology, SMAP soil moisture) achieves 79.2\% overall accuracy and macro
+F1~=~0.791 on the 2023 temporal holdout (Table~\ref{tab:test_metrics},
+Figure~\ref{fig:test_cm}).
+The ablation study (Table~\ref{tab:ablation}) demonstrates that NDVI
+phenology adds $+1.7$~pp accuracy over CDL-only, while SMAP adds only
+$+0.07$~pp at its native 9~km resolution.
+SHAP analysis (Figure~\ref{fig:shap}) identifies the prior-year CDL code
+as the single strongest predictor, with NDVI seasonal means occupying four
+of the next five ranks.
+Rotation-regime stratification (Table~\ref{tab:regime}) reveals that
+monoculture pixels are near-deterministic (95.5\% accuracy), while
+irregular-rotation pixels --- where CDL history is least predictive ---
+present the greatest challenge (70.9\%).
+The dominant error mode is corn$\leftrightarrow$soybean confusion
+(${\sim}40{,}000$ of ${\sim}104{,}000$ misclassified pixels), a
+well-documented ceiling in Corn Belt mapping driven by the overlapping
+phenologies and similar management of the two warm-season crops
+\citep{zhong2019deep, cai2018crop}.
+
+\paragraph{Limitations.}
+Several limitations warrant discussion.
+First, all three datasets operate at different native resolutions
+(CDL: 30~m; NDVI: 250~m; SMAP: 9~km), and our resampling to a
+common ${\sim}557$~m grid necessarily smooths fine-scale variability,
+particularly for CDL field boundaries and SMAP spatial gradients.
+Second, the SMAP record begins only in 2015, limiting the baseline
+to seven years for Task~3's anomaly detection and introducing missing
+features in 2013--2014 training samples for Task~4.
+Third, while the NIG framework accounts for short-baseline uncertainty,
+it assumes stationarity within the 2015--2021 reference period;
+longer-term trends in soil moisture due to climate change or land-use
+conversion are not modelled.
+Fourth, the LightGBM classifier in Task~4 uses hand-set hyperparameters
+($K = 500$, $\eta = 0.05$, depth~7) without systematic tuning; the
+corn--soy confusion rate could potentially be reduced with a more
+thorough search.
+
+\paragraph{Future work.}
+Several concrete extensions could improve on the results presented here.
+\emph{Hyperparameter optimisation.}
+We have implemented --- but did not have sufficient time to fully execute
+before submission --- an Optuna-based Bayesian hyperparameter search
+over a nine-dimensional space (number of estimators, learning rate,
+tree depth, leaf count, regularisation strength, sub-sampling rates;
+see Notebook~02b in the repository).
+Preliminary trials suggest that tuning alone could yield 1--3~pp
+additional overall accuracy, particularly by allowing more trees at lower
+learning rates and better-calibrated regularisation.
+\emph{Advanced feature engineering.}
+Integrating weather variables (growing-degree-day accumulation,
+precipitation totals) or higher-resolution soil type layers could
+sharpen the corn--soy boundary, as the two crops respond differently to
+within-season heat and moisture stress.
+Including the Task~2 \texttt{rotation\_regime} label as a direct model
+feature --- already derivable from existing CDL metrics but currently
+excluded --- provides the model a compact summary of each pixel's
+agronomic history.
+\emph{Model ensembling.}
+Combining predictions from LightGBM, XGBoost, and a small neural
+network (e.g.\ 1-D temporal convolutions on the NDVI time series)
+could reduce the variance component of the corn--soy error through
+diversity in the ensemble.
+\emph{Operational integration.}
+The SMAP anomaly scores from Task~3 could serve as in-season updating
+signals for the Task~4 classifier: a strong drought signal early in the
+growing season shifts the prior toward crops more tolerant of moisture
+stress, bridging the post-hoc classification framework with a real-time
+monitoring pipeline \citep{le2024smap_ndvi}.
+
+Taken together, the four tasks demonstrate a coherent, end-to-end
+workflow for agricultural resilience modelling: phenological analysis
+(Task~1) informs the features that improve crop classification
+(Task~4); rotation pattern identification (Task~2) provides
+stratification context that explains classifier performance; and soil
+moisture anomaly detection (Task~3) validates SMAP's utility as both a
+diagnostic and a prospective early-warning input.
+All code, configurations, and generated artifacts are available in the
+accompanying repository to support full reproducibility.
+
+\newpage
+\bibliographystyle{plainnat}
+\bibliography{references}
+\end{document}

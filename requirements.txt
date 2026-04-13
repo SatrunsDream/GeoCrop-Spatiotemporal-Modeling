@@ -39,6 +39,7 @@ lightgbm>=4.3
 xgboost>=2.0
 catboost>=1.2
 shap>=0.50
+optuna>=3.6
 
 # ── Task 4 external features ───────────────────────────────────────────────
 # scripts/download_external_features.py uses gridMET (OPeNDAP) + USGS 3DEP REST;
